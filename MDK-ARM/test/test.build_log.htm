@@ -1,0 +1,86 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: ¦ÌVision V5.36.0.0
+Copyright (C) 2021 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: a d, d, LIC=MPPLD-8BWIY-CXSU6-DNCJY-RF78T-ILI3J
+ 
+Tool Versions:
+Toolchain:       MDK-ARM Plus  Version: 5.36.0.0
+Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 7 (build 960)
+Assembler:       Armasm.exe V5.06 update 7 (build 960)
+Linker/Locator:  ArmLink.exe V5.06 update 7 (build 960)
+Library Manager: ArmAr.exe V5.06 update 7 (build 960)
+Hex Converter:   FromElf.exe V5.06 update 7 (build 960)
+CPU DLL:         SARMCM3.DLL V5.36.0.0
+Dialog DLL:      DCM.DLL V1.17.3.0
+Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.0.9.0
+Dialog DLL:      TCM.DLL V1.53.0.0
+ 
+<h2>Project:</h2>
+E:\WORK\BigMoto\STM CODE\0627MyPronetE\arm\25 07010  test\MDK-ARM\test.uvprojx
+Project File Date:  06/30/2025
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 7 (build 960)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
+Build target 'test'
+compiling main.c...
+..\My\TM1650\tm1650.h(8): warning:  #1295-D: Deprecated declaration TM1650_Init - give arg types
+  void TM1650_Init();
+..\My\TM1650\tm1650.h(10): warning:  #1295-D: Deprecated declaration TM1650_Key - give arg types
+  u8 TM1650_Key();
+..\My\TM1650\tm1650.h(18): warning:  #1-D: last line of file ends without a newline
+  #endif
+..\My\Function\Function.h(37): warning:  #1-D: last line of file ends without a newline
+  #endif
+..\My\pid.h(8): warning:  #1-D: last line of file ends without a newline
+  #endif
+..\My\MODbus\pc485slave.h(13): warning:  #1-D: last line of file ends without a newline
+  #endif
+../Core/Src/main.c(951): warning:  #177-D: variable "sClockSourceConfig"  was declared but never referenced
+    TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+../Core/Src/main.c(952): warning:  #177-D: variable "sSlaveConfig"  was declared but never referenced
+    TIM_SlaveConfigTypeDef sSlaveConfig = {0};
+../Core/Src/main.c(953): warning:  #177-D: variable "sMasterConfig"  was declared but never referenced
+    TIM_MasterConfigTypeDef sMasterConfig = {0};
+../Core/Src/main.c(1111): warning:  #177-D: function "MX_UART4_Init"  was declared but never referenced
+  static void MX_UART4_Init(void)
+../Core/Src/main.c(892): warning:  #177-D: function "MX_TIM3_Init"  was declared but never referenced
+  static void MX_TIM3_Init(void)
+../Core/Src/main.c(996): warning:  #177-D: function "MX_TIM6_Init"  was declared but never referenced
+  static void MX_TIM6_Init(void)
+../Core/Src/main.c: 12 warnings, 0 errors
+linking...
+Program Size: Code=28452 RO-data=396 RW-data=500 ZI-data=10500  
+FromELF: creating hex file...
+".\test\test.axf" - 0 Error(s), 12 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                http://www.keil.com/pack/ARM.CMSIS.5.8.0.pack
+                ARM.CMSIS.5.8.0
+                CMSIS (Common Microcontroller Software Interface Standard)
+   * Component: CORE Version: 5.5.0
+
+Package Vendor: Keil
+                http://www.keil.com/pack/Keil.STM32F1xx_DFP.2.4.0.pack
+                Keil.STM32F1xx_DFP.2.4.0
+                STMicroelectronics STM32F1 Series Device Support, Drivers and Examples
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_test
+  C:\Keil_v5\ARM\PACK\ARM\CMSIS\5.8.0\CMSIS\Core\Include
+  C:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.4.0\Device\Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE:5.5.0
+      Include file:  CMSIS\Core\Include\tz_context.h
+Build Time Elapsed:  00:00:02
+</pre>
+</body>
+</html>

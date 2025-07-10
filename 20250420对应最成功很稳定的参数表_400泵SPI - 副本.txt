@@ -1,0 +1,1474 @@
+VP=550，Vi=1000后，顺利上12000. 报警阀值50. 现在加减速也基本顺滑  Pid之P改为了如下 ：	if(FactSpeed<5000)P=180;//10;  10为不是百分数 。    550起动时有电流怪叫声。现改为500.都能顺利上12K
+		else if(FactSpeed<10000)P=180;//16;
+			else P=180; 
+ P=180对10000以上很关键
+但降速会有敲一下（后面没有了）
+
+
+现在试P=200不行
+
+
+
+
+
+if(FactSpeed<5000)P=100;//10;  10为不是百分数 。  50 baifenshu
+		else if(FactSpeed<9000)P=100;//16;
+			else P=100;
+	if(FactSpeed<1100)    //1000以内
+		{
+				SyncWarningVal=130;     //500ms 250能通过
+				OffVal=140; 
+		}
+		else
+		{
+			SyncWarningVal=65;    //每边余量70以内
+			OffVal=45; 
+		}
+			
+百分数作为误差源 程序版本：25004016_chage JiaJianSpeedTiime_moto2_1024
+
+
+t16 PnAttribute[][4]=
+{
+//	    符号数，        最小值，       最大值，        出厂值 	// 0: unsigned ; 1: signed ; 2: bit ; 3: hex  第一列的解释
+		2, 		0,	   15,	    6,	// Pn000:	[bit0:参数伺服ON,bit1:P-OT禁止,bit2:N-OT禁止,bit3:瞬停报警使能]   B0110
+		2, 		0,	   15,		0,	// Pn001:	[bit0:逆回转模式,bit1:模拟速度限制使能,bit2:模拟转矩限制使能,bit3:第二电子齿轮使能]  0，1
+		2,		0,	   15,		2,	// Pn002:	[bit0:电子齿轮切换方式，bit1:[0]串行编码器测速去除毛刺[1]实际,bit2[0]检测绝对值编码器相关报警[1]不检测绝对值编码器相关报警,bit3[0]旋变信号阈值缺省值[1]旋变信号阈值放宽值  B0010
+		2,		0,	   15,		1,	// Pn003:	[bit0:码盘误码报警使能，bit1:c脉冲保护，bit2:低速补偿，bit3:过载增强] 误码报警必须为1    H0000
+		3,		0, 0x3425,		5,	// Pn004:	[hex0:停止方式，hex1:偏差计数器清零方式，hex2:指令脉冲形式，hex3:脉冲取反]  H0001
+		3,		0, 0x33E3,		0x10d0,	// Pn005:	[hex0:转矩前馈形式（bit0:转矩前馈功能,bit1:[0]->加速度前馈以1ms作单位[1]->加速度前馈以0.1ms作为单位。），
+									//			 hex1:控制方式，hex2:原Pn047超差报警，hex3:电机型号]  H10D0
+		3,		0, 0x2133, 0x0020,	// Pn006:	[hex0:总线类型选择，hex1:旋变分辨率选择，hex2:低频抖动抑制开关, hex3:脉冲滤波截止频率选择(0:4M, 1:650K, 2:100K)]   H20
+		2,		0,		1,		0,	// Pn007:	[bit0:C脉冲展宽 bit1~bit3:保留]0
+		0,		0,		0,		0,	// Pn008:	保留
+		0,		0,		0,		0,	// Pn009:	保留
+		0,		0,		0,		0,	// Pn010:	保留
+		0,		0,		0,		0,	// Pn011:	保留
+		0,		0,		0,		0,	// Pn012:	保留
+		0,		0,		0,		0,	// Pn013:	保留
+		0,		0,		0,		0,	// Pn014:	保留
+		0,		0,		0,		0,	// Pn015:	保留
+		                                       //后列有效
+		0, 		0,	 	6,	  	1,	// Pn016:	Pn100 实时自动惯量检测设置[0:用户手动增益，1,2,3=常规模式;4,5,6=垂直负载;1,4 = 负载惯量没有变化;2,5 = 负载惯量变化很小;3,6=负载惯量变化很大] 0
+		0, 		0,	   15,	   	5,	// Pn017:	Pn101 负载刚性选择  2
+		0,		1,	 4000,	  160,	// Pn018:	Pn102 速度环增益单位:Hz  150
+		0,		1,	 4096,	  500,	// Pn019:	Pn103 速度环积分时间单位:0.1ms    1500差   500 效果较好
+		0,		0,	 1000,	   40,	// Pn020:	Pn104 位置环增益单位:Hz   10
+		0,		0,	  250,		4,	// Pn021:	Pn105 转矩指令滤波器常数  4
+		0, 		0,	20000,	   	500,	// Pn022:	Pn106 负载惯量百分比    100
+		0,		1,	 4000,	   40,	// Pn023:	Pn107 速度环第二增益单位:Hz
+		0,		1,	 4096,	  200,	// Pn024:	Pn108 速度环第二积分时间单位:0.1ms
+		0,		0,	 1000,	   40,	// Pn025:	Pn109 位置环第二增益单位:Hz
+		0, 		0,	  250,	   	4,	// Pn026:	Pn110 第二转矩滤波时间常数
+		0,		0,	  300,		0,	// Pn027:	Pn111 速度偏置
+		0,		0,	  100,		0,	// Pn028:	Pn112 前馈
+		0,		0,	  640,		0,	// Pn029:	Pn113 前馈滤波   500
+		0, 		0,	  100,	   	0,	// Pn030:	Pn114 转矩前馈百分比
+		0, 		0,	  640,	   	0,	// Pn031:	Pn115 转矩前馈滤波时间常数
+
+		0, 		0,	  	4,	   	0,	// Pn032:	Pn116 P/PI切换条件[0:转矩指令百分比，1:偏差计数器数值，2:给定加速度数值，3:给定速度数值，4:固定PI]
+		0, 		0,	  300,	  200,	// Pn033:	Pn117 转矩切换阀值
+		0, 		0,	10000,	   	0,	// Pn034:	Pn118 偏差计数器切换阀值
+		0, 		0,	 3000,	   	0,	// Pn035:	Pn119 给定加速度切换阀值
+		0, 		0,	10000,	   	0,	// Pn036:	Pn120 给定速度切换阀值
+		0, 		0,	  	6,	   	0,	// Pn037:	Pn121 增益切换条件[0:固定到第一组增益，1:外部开关增益切换，2:转矩百分比，3:偏差计数器数值，
+									//						4:给定加速度数值（10r/min），5:给定速度数值，6:有位置指令输入]
+		0, 		0,	20000,	   	0,	// Pn038:	Pn122 切换延迟时间
+		0, 		0,	20000,	   	0,	// Pn039:	Pn123 切换门槛水平
+		0, 		0,	20000,	   	0,	// Pn040:	Pn124 速度增益积分切换时间
+		0, 		0,	20000,	   	0,	// Pn041:	Pn125 位置增益切换时间
+		0, 		0,	20000,	   	0,	// Pn042:	Pn126 切换滞环
+		0, 		0,	  100,	   10,	// Pn043:	Pn127 低速测速滤波   10
+		0, 		0,	  	3,	   	3,	// Pn044:	Pn128 实时调整时速度增益和位置增益的关系[0 = Kv : Kp-->1;1 = Kv : Kp-->2;2 = Kv : Kp-->3;3 = Kv : Kp-->4]    3
+		0, 		0,	30000,	  	0,	// Pn045:	Pn129 低速校正系数
+		0,		0,	 3000,		0,	// Pn046:	Pn130 摩擦力矩（0.1%）
+		0,		0,	  100,		0,	// Pn047:	Pn131 摩擦补偿速度无效区（rpm）
+		0,		0,	 1000,		0,	// Pn048:	Pn132 粘滞摩擦（0.1%）1000rpm对应的额定扭矩
+		0,		1,	 2000,	  700,	// Pn049:	Pn133 压力环比例系数1
+		0,		1,	20000,	  600,	// Pn050:	Pn134 压力环积分时间1  单位0.1ms
+		0, 		0,    500,	   50,	// Pn051:	Pn135 压力模式下最大反向转速(设置时注意泵是否可反向)
+		1, 0xFC00,   1024,      0,  // Pn052:	Pn136 压力反馈偏移量调整
+		0,		0,	 1000,	   10,	// Pn053:	Pn137 压力反馈滤波时间常数(0.1ms)
+		0,		0,	 1000,	   10,	// Pn054:	Pn138 压力给定滤波时间常数(0.1ms)
+		0,		1,	 2000,	  700,	// Pn055:	Pn139 压力环比例系数2
+		0,		1,	20000,	  600,	// Pn056:	Pn140 压力环积分时间2  单位0.1ms
+		0,		1,	 2000,	  700,	// Pn057:	Pn141 压力环比例系数3
+		0,		1,	20000,	  600,	// Pn058:	Pn142 压力环积分时间3  单位0.1ms
+		0, 		1,	 2000,	  700,	// Pn059:	Pn143 压力环比例系数4
+		0,		1,	20000,	  600,	// Pn060:	Pn144 压力环积分时间4  单位0.1ms
+		0,		0,	 2000,	  800,	// Pn061:	Pn145 压力环PPI切换阀值 单位0.1bar
+		0,		0,		0,		0,	// Pn062:	Pn146 保留
+		0,		0,		0,		0,	// Pn063:	Pn147 保留
+		0,		0,		0,		0,	// Pn064:	Pn148 保留
+		0,		0,		0,		0,	// Pn065:	Pn149 保留
+
+		#if	  ENC_TYPE == ENC2500
+		0,	    1,   2500,   2500,	// Pn066:	Pn200 PG分频
+		#elif ENC_TYPE == ENC17BIT
+		0,	    16, 16384,  16384,	// Pn066:	Pn200 PG分频
+		#endif
+		0,		1,	65535,		1,	// Pn067:	Pn201 第一电子齿轮分子
+		0,		1,	65535,		1,	// Pn068:	Pn202 电子齿轮分母
+		0,		1,	65535,		1,	// Pn069:	Pn203 第二电子齿轮分子
+		0,		0,	32767,		0,	// Pn070:	Pn204 位置指令滤波时间常数
+		0,		0,		1,		0,	// Pn071:	Pn205 位置指令滤波形式选择
+		0,		0,		0,		0,	// Pn072:	Pn206 保留
+		0,		0,		0,		0,	// Pn073:	Pn207 保留
+		0,		0,		0,		0,	// Pn074:	Pn208 保留
+		0,		0,		0,		0,	// Pn075:	Pn209 保留
+		0,		0,		0,		0,	// Pn076:	Pn210 保留
+		0,		0,		0,		0,	// Pn077:	Pn211 保留
+		0,		0,		0,		0,	// Pn078:	Pn212 保留
+		0,		0,		0,		0,	// Pn079:	Pn213 保留
+
+		0,		0,	 3000,	  150,	// Pn080:	Pn300 速度指令输入增益，单位r/min.v
+		1, 0xFC18,	 1000,	    0,	// Pn081:	Pn301 模拟速度给定零点偏置
+		0,		0,	    0,	  	0,	// Pn082:	保留
+		0,		0,	    0,	  	0,	// Pn083:	保留
+		1, 0xE890,	 16500	  600,	// Pn084:	Pn304 参数速度
+		0, 		0,	 6000,	  600,	// Pn085:	Pn305 JOG速度 500
+		0,      0,	10000,	  500,	// Pn086:	Pn306 软启动加速时间    8000
+		0, 		0,	10000,		0,	// Pn087:	Pn307 软启动减速时间  5000
+		0, 		0,	10000,		0,	// Pn088:	Pn308 速度滤波时间常数   0
+		0, 		0,	10000,		0,	// Pn089:	Pn309 S曲线上升时间    0
+		0, 		0,	 	3,		0,	// Pn090:	Pn310 速度指令曲线形式[0:斜坡 1:S曲线 2:一次滤波 3:二次滤波]    ？
+		0, 		0,	    3,		0,	// Pn091:	Pn311 S形状选择
+		1, 0xE890,	 6000,	  500,	// Pn092:	Pn312 通讯点动速度
+		0, 		0,	10000,		0,	// Pn093:	Pn313 压力斜波时间单位0.1ms:100bar上升的时间
+		0, 		0,	10000,	  250,	// Pn094:	Pn314 压力反馈当量0.1bar/v
+		0, 		0,	10000,	  140,	// Pn095:	Pn315 压力给定当量0.1bar/v
+		1, 0xE890,	 6000,	  600,	// Pn096:	Pn316 内部速度1
+		1, 0xE890,	 6000, 	  200,	// Pn097:	Pn317 内部速度2
+		1, 0xE890,	 6000,	  300,	// Pn098:	Pn318 内部速度3
+		1, 0xE890,	 6000, 0xFF9C,	// Pn099:	Pn319 内部速度4
+		1, 0xE890,	 6000, 0xFF38,	// Pn100:	Pn320 内部5
+		1, 0xE890,	 6000, 0xFED4,	// Pn101:	Pn321 内部速度6
+		1, 0xE890,	 6000,	  500,	// Pn102:	Pn322 内部速度7
+
+		0, 	   10,	  100,	   33,	// Pn103:	Pn400 扭矩输入指令增益
+		0, 		0,	  300,	  300,	// Pn104:	Pn401 正转转矩内部限制                    ？
+		0, 		0,	  300,	  300,	// Pn105:	Pn402 反转转矩内部限制                      ？ 
+		0, 		0,	  300,	  100,	// Pn106:	Pn403 正转外部转矩限制
+		0, 		0,	  300,	  100,	// Pn107:	Pn404 反转外部转矩限制
+		0,		0,	  300,	  300,	// Pn108:	Pn405 反接制动转矩限制
+		0, 		0,	 6000,	 1500,	// Pn109:	Pn406 扭矩控制时的速度限制
+		0, 	   50,	 5000,	 5000,	// Pn110:	Pn407 限波频率1
+		0, 		0,	   11,		1,	// Pn111:	Pn408 限波深度1
+		0, 	   50,	 5000,	 5000,	// Pn112:	Pn409 限波频率2
+		0, 		0,	   11,		1,	// Pn113:	Pn410 限波深度2
+		0, 	   50,	  500,	  100,	// Pn114:	Pn411 振动频率(Unit: 0.1Hz)
+		0, 		0,	  200,	   25,	// Pn115:	Pn412 模型阻尼系数
+		0, 		1,	 2000,	  100,	// Pn116:	Pn413 转矩控制延迟时间(0.1ms)
+		0,		10,	 1000,	   50,	// Pn117:	Pn414 转矩控制速度滞环区(1rpm)
+		1, 0xFC18,	 1000,	    0,	// Pn118:	Pn415 模拟转矩给定零点偏置
+		0, 		0,	 	0,		0,	// Pn119:	Pn416 保留
+
+		0, 		0,	 5000,	   10,	// Pn120:	Pn500 定位误差
+		0, 		0,	  100,	   10,	// Pn121:	Pn501 同速误差
+		0, 	    0,	 3000,	   10,	// Pn122:	Pn502 零嵌位转速
+		0, 		0,	 3000,	   20,	// Pn123:	Pn503 旋转检测转速TGON
+		0, 	    1,	32767,	 1024,	// Pn124:	Pn504 偏差计数器溢出报警
+		1, 0xF830,	 2000,	    0,	// Pn125:	Pn505 伺服On等待时间
+		0,		0,	  500,		0,	// Pn126:	Pn506 基本的等待流程
+		0,	   10,	  100,	  100,	// Pn127:	Pn507 制动等待速度
+		0,	   10,	  100,	   50,	// Pn128:	Pn508 制动等待时间
+		3, 		0, 0xEEEE, 0x3210,  // Pn129:	Pn509 将输入端口分配到信号16进制4位一个端口	
+		3, 		0, 0xEEEE, 0x7654,  // Pn130:	Pn510 将输入端口分配到信号16进制4位一个端口
+		3,		0, 0x0888, 0x0210,	// Pn131:	Pn511 输出信号分配{hex00:1CN78,hex01:CN12,hex02:cn56[0:COIN,1:TGON,2:S-RDY,3:CLT,4:BRK,5:CPULSE,6:OT,7:RD]}
+		2,		0,	   15,		0,	// Pn132:	Pn512 Bus_io_LEn
+		2,		0,	   15,		0,	// Pn133:	Pn513 Bus_io_HEn
+		0, 		0,	 1000,		1,	// Pn134:	Pn514 输入端口滤波时间
+		0, 		0,	    3,		1,	// Pn135:	Pn515 报警端口滤波时间
+		2, 		0,	   15,		0,	// Pn136:	Pn516 输入端口信号取反
+		2, 		0, 	   15,		0,	// Pn137:	Pn517 输入端口信号取反
+		0, 	   50,	 2000,	  125,	// Pn138:	Pn518 动态制动时间
+		0, 		0,	10000,	    3,	// Pn139:	Pn519 串行编码器错误许可时间
+		0, 		0,  60000,	  500,	// Pn140:	Pn520 到位时间
+		#if DRV_TYPE == DRV_15KW
+		2, 		0,	   15, 		0,	// Pn141:	Pn521 Bit0：A15|| Bit1：A14|| Bit2：A13|| Bit3：A20
+		2, 		0,	   15,		0,	// Pn142:	Pn522 Bit0：0：硬件检测	1：软件检测|| Bit1~Bit3：保留
+		2, 		0,	   15,		2,	// Pn143:	Pn523 Bit0：A18|| Bit1：A19、A22|| Bit2~Bit3：保留
+		0, 		0,	 	0,		0,	// Pn144:	Pn524 保留
+		0, 	  100,	  150,	  100,	// Pn145:	Pn525 过载报警阀值  单位百分比
+		0, 	   50,	  180,	  110,	// Pn146:	Pn526 电机过热报警温度阀值 单位摄氏度
+		0, 	  480,	  520,	  500,	// Pn147:	Pn527 电源5v的实际测量值，单位是10mv
+		#elif DRV_TYPE == DRV_400W
+		2, 		0,	   15, 		1,	// Pn141:	Pn521 Bit0：A15|| Bit1：A14|| Bit2：A13|| Bit3：A20
+		2, 		0,	   15,		0,	// Pn142:	Pn522 Bit0：0：硬件检测	1：软件检测|| Bit1~Bit3：保留
+		2, 		0,	   15,		2,	// Pn143:	Pn523 Bit0：A18|| Bit1：A19、A22|| Bit2~Bit3：保留
+		0, 		0,	 	0,		0,	// Pn144:	Pn524 保留
+		0, 	  100,	  150,	  100,	// Pn145:	Pn525 过载报警阀值  单位百分比      100
+		0, 		0,	 	0,	    0,	// Pn146:	Pn526 保留
+		0, 		0,	 	0,		0,	// Pn147:	Pn527 保留
+		#else
+		2, 		0,	   15, 		8,	// Pn141:	Pn521 Bit0：A15|| Bit1：A14|| Bit2：A13|| Bit3：A20
+		2, 		0,	   15,		0,	// Pn142:	Pn522 Bit0：0：硬件检测	1：软件检测|| Bit1~Bit3：保留
+		2, 		0,	   15,		2,	// Pn143:	Pn523 Bit0：A18|| Bit1：A19、A22|| Bit2~Bit3：保留
+		0, 		0,	 	0,		0,	// Pn144:	Pn524 保留
+		0, 	  100,	  150,	  100,	// Pn145:	Pn525 过载报警阀值  单位百分比
+		0, 		0,	 	0,		0,	// Pn146:	Pn526 保留
+		0, 		0,	 	0,		0,	// Pn147:	Pn527 保留
+		#endif
+		2, 		0,	   15,		0,	// Pn148:	Pn528 输出端口信号取反{Bit00:1CN_5,6;Bit01:1CN_7,8;Bit02:1CN_9,10;Bit03:1CN_11,12}
+		0, 		0,	 	0,		0,	// Pn149:	Pn529 保留
+		0, 		0,	 	0,		0,	// Pn150:	Pn530 保留
+		0, 		0,	 	0,		0,	// Pn151:	Pn531 保留
+
+		1, 0xD8F1,	 9999,		0,	// Pn152:	Pn600 点位控制位置脉冲[10000P]
+		1, 0xD8F1,	 9999,		0,	// Pn153:	Pn601 点位控制位置脉冲[1P]
+		1, 0xD8F1,	 9999,		0,	// Pn154:	Pn602 点位控制位置脉冲[10000P]
+		1, 0xD8F1,	 9999,		0,	// Pn155:	Pn603 点位控制位置脉冲[1P]
+		1, 0xD8F1,	 9999,		0,	// Pn156:
+		1, 0xD8F1,	 9999,		0,	// Pn157:
+		1, 0xD8F1,	 9999,		0,	// Pn158:
+		1, 0xD8F1,	 9999,		0,	// Pn159:
+		1, 0xD8F1,	 9999,		0,	// Pn160:
+		1, 0xD8F1,	 9999,		0,	// Pn161:
+		1, 0xD8F1,	 9999,		0,	// Pn162:
+		1, 0xD8F1,	 9999,		0,	// Pn163:
+		1, 0xD8F1,	 9999,		0,	// Pn164:
+		1, 0xD8F1,	 9999,		0,	// Pn165:
+		1, 0xD8F1,	 9999,		0,	// Pn166:
+		1, 0xD8F1,	 9999,		0,	// Pn167:
+		1, 0xD8F1,	 9999,		0,	// Pn168:
+		1, 0xD8F1,	 9999,		0,	// Pn169:
+		1, 0xD8F1,	 9999,		0,	// Pn170:
+		1, 0xD8F1,	 9999,		0,	// Pn171:
+		1, 0xD8F1,	 9999,		0,	// Pn172:
+		1, 0xD8F1,	 9999,		0,	// Pn173:
+		1, 0xD8F1,	 9999,		0,	// Pn174:
+		1, 0xD8F1,	 9999,		0,	// Pn175:
+		1, 0xD8F1,	 9999,		0,	// Pn176:
+		1, 0xD8F1,	 9999,		0,	// Pn177:
+		1, 0xD8F1,	 9999,		0,	// Pn178:
+		1, 0xD8F1,	 9999,		0,	// Pn179:
+		1, 0xD8F1,	 9999,		0,	// Pn180:
+		1, 0xD8F1,	 9999,		0,	// Pn181:
+		1, 0xD8F1,	 9999,		0,	// Pn182:
+		1, 0xD8F1,	 9999,		0,	// Pn183:	Pn631
+
+		0, 		0,	 3000,	  500,	// Pn184:	Pn632
+		0, 		0,	 3000,	  500,	// Pn185:
+		0, 		0,	 3000,	  500,	// Pn186:
+		0, 		0,	 3000,	  500,	// Pn187:
+		0, 		0,	 3000,	  500,	// Pn188:
+		0, 		0,	 3000,	  500,	// Pn189:
+		0, 		0,	 3000,	  500,	// Pn190:
+		0, 		0,	 3000,	  500,	// Pn191:
+		0, 		0,	 3000,	  500,	// Pn192:
+		0, 		0,	 3000,	  500,	// Pn193:
+		0, 		0,	 3000,	  500,	// Pn194:
+		0, 		0,	 3000,	  500,	// Pn195:
+		0, 		0,	 3000,	  500,	// Pn196:
+		0, 		0,	 3000,	  500,	// Pn197:
+		0, 		0,	 3000,	  500,	// Pn198:
+		0, 		0,	 3000,	  500,	// Pn199:	Pn647
+
+		0, 		0,	32767,		0,	// Pn200:	Pn648
+		0, 		0,	32767,		0,	// Pn201:
+		0, 		0,	32767,		0,	// Pn202:
+		0, 		0,	32767,		0,	// Pn203:
+		0, 		0,	32767,		0,	// Pn204:
+		0, 		0,	32767,		0,	// Pn205:
+		0, 		0,	32767,		0,	// Pn206:
+		0, 		0,	32767,		0,	// Pn207:
+		0, 		0,	32767,		0,	// Pn208:
+		0, 		0,	32767,		0,	// Pn209:
+		0, 		0,	32767,		0,	// Pn210:
+		0, 		0,	32767,		0,	// Pn211:
+		0, 		0,	32767,		0,	// Pn212:
+		0, 		0,	32767,		0,	// Pn213:
+		0, 		0,	32767,		0,	// Pn214:
+		0, 		0,	32767,		0,	// Pn215:	Pn663
+
+		0, 		0,	  300,	   10,	// Pn216:	Pn664
+		0, 		0,	  300,	   10,	// Pn217:
+		0, 		0,	  300,	   10,	// Pn218:
+		0, 		0,	  300,	   10,	// Pn219:
+		0, 		0,	  300,	   10,	// Pn220:
+		0, 		0,	  300,	   10,	// Pn221:
+		0, 		0,	  300,	   10,	// Pn222:
+		0, 		0,	  300,	   10,	// Pn223:
+		0, 		0,	  300,	   10,	// Pn224:
+		0, 		0,	  300,	   10,	// Pn225:
+		0, 		0,	  300,	   10,	// Pn226:
+		0, 		0,	  300,	   10,	// Pn227:
+		0, 		0,	  300,	   10,	// Pn228:
+		0, 		0,	  300,	   10,	// Pn229:	
+		0, 		0,	  300,	   10,	// Pn230:
+		0, 		0,	  300,	   10,	// Pn231:	Pn679
+
+		0,		0,		0,		0,	// Pn232:	Pn680 保留
+		3, 0x0000, 0x0133, 0x0000,	// Pn233:	Pn681 换步以及启动
+									//			hex0: 选择单次/循环，启动/参考点
+									//			hex1: 换步及启动方式	
+									//			hex2: 换步信号输入方式
+									//			hex3: 保留
+		0,		0,		1,		0,	// Pn234: 	Pn682 编程方式
+		0, 		0,	   15,	    0,	// Pn235:	Pn683 编程起始步
+		0, 		0,	   15,	    1,	// Pn236:	Pn684 编程终止步	
+		0, 		0,	 3000,	 1500,	// Pn237:	Pn685 搜索行程速度
+		0, 		0,	  200,	   30,	// Pn238:	Pn686 离开行程开关速度
+		1, 0xD8F1,	 9999,		0,	// Pn239:	Pn687 示教位置脉冲[10000P]
+		1, 0xD8F1,	 9999,		0,	// Pn240:	Pn688 示教位置脉冲[1P]
+		2, 		0,	 	7,	  	0,	// Pn241:	Pn689 回零模式设定
+		0, 		0,	 9999,	  	0,	// Pn242:	Pn690 原点回归偏移脉冲数 单位10000
+		0, 		0,	 9999,	  	0,	// Pn243:	Pn691 原点回归偏移脉冲数 单位1
+		0, 		0,	 	0,	  	0,	// Pn244:	Pn692 保留
+		0, 		0,	 	0,	  	0,	// Pn245:	Pn693 保留
+		0, 		0,	 	0,	  	0,	// Pn246:	Pn694 保留
+		0, 		0,	 	0,	  	0,	// Pn247:	Pn695 保留
+		0, 		0,	 	0,	  	0,	// Pn248:	Pn696 保留
+		0, 		0,	 	0,	  	0,	// Pn249:	Pn697 保留
+		0, 		0,	 	0,	  	0,	// Pn250:	Pn698 保留
+		0, 		0,	 	0,	  	0,	// Pn251:	Pn699 保留
+
+
+		3, 		0, 0x0182, 0x0151,	// Pn252:	Pn700 SCI通讯相关参数
+									//					[hex0:通讯速度选择，hex1:通讯协定参数，   ？
+									//			         hex2:通讯协议选择，hex3:保留]
+		0, 		1,    247,		1,	// Pn253:	Pn701 MODBUS轴地址
+		0, 		0,	15000,	  	0,	// Pn254:	Pn702 保留		
+		3, 		0, 0x0015, 0x0004,	// Pn255:	Pn703 hex0:CAN通讯俾?hex1:open IP time early error
+		0, 		1,	  127,	  	1,	// Pn256:	Pn704 CAN通讯节点
+		0, 		0,	 	0,	  	0,	// Pn257:	Pn705 保留
+		0, 		0,	 	0,	  	0,	// Pn258:	Pn706 保留
+		0, 		0,	 	0,	  	0,	// Pn259:	Pn707 保留
+		0, 		0,	 	0,	  	0,	// Pn260:	Pn708 保留
+		0, 		0,	 	0,	  	0,	// Pn261:	Pn709 保留
+		0, 		0,	 	0,	  	0,	// Pn262:	Pn710 保留
+		0, 		0,	 	0,	  	0,	// Pn263:	Pn711 保留
+		0, 		0,	 	0,	  	0,	// Pn264:	Pn712 保留
+		0, 		0,	 	0,	  	0,	// Pn265:	Pn713 保留
+		0, 		0,	 	0,	  	0,	// Pn266:	Pn714 保留
+		0, 		0,	 	0,	  	0,	// Pn267:	Pn715 保留
+		0, 		0,	 	0,	  	0,	// Pn268:	Pn716 保留
+		0, 		0,	 	0,	  	0,	// Pn269:	Pn717 保留
+		0, 		0,	 	0,	  	0,	// Pn270:	Pn718 保留
+		0, 		0,	 	0,	  	0,	// Pn271:	Pn719 保留
+
+
+		0, 		0,	 4096,	 4096,	// Pn272:	Pn800 电流前馈比例   0
+		0, 		0,	 4096,	 4096,	// Pn273:	Pn801 反电势补偿比例4.12    4096
+		0, 		0,	 5000,	  600,	// Pn274:	Pn802 异步拖动Uq幅值   600
+		0, 		0,	30000,	  210,	// Pn275:	Pn803 实际额定扭矩    210
+		0, 		0,	 4096,	  205,	// Pn276:	Pn804 Ku-->(220/1000(1.5Rs))*0.005*4096...其中0.005为Iqr分辨率    45
+		0, 		0,	32767,	 4600,	// Pn277:	Pn805 极限转速 r/min   有作用   电流前馈用13000
+		0, 		0,	   16,	   14,	// Pn278:	Pn806 表格个数
+
+		0, 		0,	 20000,	   10,	// Pn279:	Pn807 转矩前馈x方向  10
+		0, 		0,	 20000,	   25,	// Pn280:
+		0, 		0,	 20000,	   50,	// Pn281:
+		0, 		0,	 20000,	  100,	// Pn282:
+		0, 		0,	 20000,	  200,	// Pn283:
+		0, 		0,	 20000,	  400,	// Pn284:
+		0, 		0,	 20000,	  600,	// Pn285:
+		0, 		0,	 20000,	  800,	// Pn286:
+		0, 		0,	 20000,	 1000,	// Pn287:
+		0, 		0,	 20000,	 1500,	// Pn288:
+		0, 		0,	 20000,	 2000,	// Pn289:
+		0, 		0,	 20000,	 2500,	// Pn290:
+		0, 		0,	 20000,	 3000,	// Pn291:
+		0, 		0,	 20000,	 4000,	// Pn292:           
+		0, 		0,	 20000,	  900,	// Pn293:           
+		0, 		0,	 20000,	 1000,	// Pn294:	Pn822   chxb   1000
+
+		0, 		0,	 4000,	   21,	// Pn295:	Pn823 转矩前馈y方向   21
+		0, 		0,	 4000,	   94,	// Pn296:
+		0, 		0,	 4000,	  347,	// Pn297:
+		0, 		0,	 4000,	  482,	// Pn298:
+		0, 		0,	 4000,	  554,	// Pn299:
+		0, 		0,	 4000,	  590,	// Pn300:
+		0, 		0,	 4000,	  607,	// Pn301:
+		0, 		0,	 4000,	  621,	// Pn302:
+		0, 		0,	 4000,	  631,	// Pn303:
+		0, 		0,	 4000,	  662,	// Pn304:
+		0, 		0,	 4000,	  690,	// Pn305:
+		0, 		0,	 4000,	  711,	// Pn306:
+		0, 		0,	 4000,	  735,	// Pn307:
+		0, 		0,	 4000,	  785,	// Pn308:
+		0, 		0,	 4000,	  121,	// Pn309:
+		0, 		0,	 4000,	  123,	// Pn310:	Pn838  123
+
+		0, 		0,	 1000,	  100,	// Pn311:	Pn839 电感  30
+
+
+
+//      符号数，        最小值，       最大值，        出厂值  // 0: unsigned ; 1: signed ; 2: bit ; 3: hex  第一列的解释
+	   #if ENC_TYPE == ENC17BIT
+		#if DRV_TYPE == DRV_400W
+		3, 0x0003, 0x0105, 0x0003,	// Pn312:	Pn840 辅助电机参数
+		#elif DRV_TYPE == DRV_1KW
+		3, 0x0203, 0x0505, 0x0203,	// Pn312:	Pn840 辅助电机参数
+		#elif DRV_TYPE == DRV_5KW
+		3, 0x0603, 0x0705, 0x0603,	// Pn312:	Pn840 辅助电机参数
+		#elif DRV_TYPE == DRV_15KW
+		3, 0x0803, 0x0B05, 0x0803,	// Pn312:	Pn840 辅助电机参数
+		#endif
+
+	   #elif ENC_TYPE == ENC2500
+		#if DRV_TYPE == DRV_400W
+		3, 0x0006, 0x0106, 0x0006,	// Pn312:	Pn840 辅助电机参数
+		#elif DRV_TYPE == DRV_1KW
+		3, 0x0205, 0x0506, 0x0205,	// Pn312:	Pn840 辅助电机参数
+		#elif DRV_TYPE == DRV_5KW
+		3, 0x0606, 0x0706, 0x0606,	// Pn312:	Pn840 辅助电机参数   606
+		#elif DRV_TYPE == DRV_15KW
+		3, 0x0806, 0x0B06, 0x0806,	// Pn312:	Pn840 辅助电机参数
+		#endif
+       #endif						//			hex0:编码器类型
+									//				0：增量多摩川，
+									//				1：省线多摩川，
+									//				2：省线SUMTAK，
+									//				3：绝对值多摩川17位，
+									//				4：增量多摩川17位，
+									//				5: 旋转变压器，
+									//			hex1:保留
+									// 			hex2:驱动器类型
+		0, 		1,	32767,	   39,	// Pn313:	Pn841 增益换算系数 = 1/[(Pi/300 * J * e-4)*Iqm/Tn],Tn单位Nm,作除法  50
+		0, 		0,	  15,	  15,	// Pn314:	                Pn842 模块电流    限制额定电流限制异步拖动结束时定位。 Iqrref限制=模块电流*200  在limitIqr中。limitIqr到处均有   40
+		0, 	  100,	 12000,	 12000,	// Pn315:	Pn843 最高转速  13000  
+		0, 		1,	32767,	  6000,	// Pn316:	Pn844 电机本体惯量 与ACC有关   303
+		0, 		1,	 800,	 600,	// Pn317:	Pn845 额定电流     //判断过载，异步拖动后静止时用到。运转时要用到？1000 =10*100
+		0, 		1,	   28,	  	2,	// Pn318:	Pn846 极对数  2
+		0, 	  500,	 8192,	 2500,	// Pn319:	Pn847 编码器线数   1024
+		0, 		1,	  100,	   30,	// Pn320:	Pn848 异步拖动频率   30
+		0, 		1,	 2500,	  267,	// Pn321:	Pn849 电流采样系数	0.1mV/A   240
+		0, 		1,	30000,	  1000,	// Pn322:	Pn850 电流环增益      3000
+		0, 		0,	 1000,	   40,	// Pn323:	Pn851 电流环积分系数     20
+		0, 		0,	 	1,	  	0,	// Pn324:	Pn852 模拟上电    0
+		0, 		0,	65535,	1924,	// Pn325:	Pn853 相位     modbus0902读取
+		0, 		1,	   10,	  	1,	// Pn326:	Pn854 Kisp1    1
+		0, 	   10,	 1000,	  100,	// Pn327:	Pn855 Kisp2   100               
+		0, 		0,	 12000,	 600,	// Pn328:	Pn856 额定转速  //    判断过载用       13000
+		0,	    1,	 6500, 	 500,	// Pn329:	Pn857   磁额定电流 好像与jgop运行有关      用于惯量实时检测     18000
+
+
+//      符号数，        最小值，       最大值，        出厂值  // 0: unsigned ; 1: signed ; 2: bit ; 3: hex  第一列的解释
+		0, 		0,		1,	  	1,	// Pn330:	Pn858 [0]:取电机型号参数表值，[1]取实际参数值Pn[330]==1？==0？有个选择    1
+		0,    	        0,	 	3,	  	0,	// Pn331:	Pn859 保留
+
+		0, 		0,	       3,	 	0,	// Pn332:	Pn860 保留  改为      旋变分辨率 0 =10bit,1=14bit  2=12bit  3=16bit  （原12bit)      1
+		0, 		0, 		2, 		0,    // Pn333:	       Pn861 保留   改为    正交输出分辨率多少线  0=256线(4倍后10位）。1=4096线(4倍后14位）。2=1024线（4倍后12位）。  3= 16384 （4倍后16位65536）   (原1024线）   1
+
+		0, 		0,	 	0,		0,	// Pn334:	Pn862 保留
+		0, 		0,	 	0,		0,	// Pn335:	Pn863 保留
+		0, 		0,	 	0,		0,	// Pn336:	Pn864 保留
+		0, 		0,	 	1,		0,	// Pn337:	Pn865 保留	flags
+		0,		1,  65535,		1,	// Pn338:	Pn866 保留	Geer NumL
+		0,      0,	65535,	  	0,	// Pn339:	Pn867 保留	Geer NumH
+		0, 		1,	65535,	    1,	// Pn340:	Pn868 保留	Geer DivL
+		0, 		0, 	65535, 		0,  // Pn341:	Pn869 保留	Geer DivH
+		0, 		0,	 	0,		0,	// Pn342:	Pn870 保留	Home_offsetL
+		0, 		0,	 	0,		0,	// Pn343:	Pn871 保留	Home_offsetH
+		0, 		0,	 	0,		0,	// Pn344:	Pn872 保留 home position low  encoder sigle position
+		0, 		0,	 	0,		0,	// Pn345:	Pn873 保留 home position high encoder
+
+		1, 0xFC00,   1024,      0,  // AnalogOffset1
+		1, 0xFC00,   1024,      0,  // AnalogOffset2
+		1, 0xFC00,   1024,      0,  // CurrentOffset1
+		1, 0xFC00,   1024,      0,  // CurrentOffset2
+		0, 		0,		0,      0  	// CurrentOffset2
+};
+#define W25Q16_PAGE_SIZE    256                          //一页的大小，256字节
+#define W25Q16_SECTOR_SIZE (4*1024)                      //扇区大小，字节
+#define W25Q16_BLOCK_SIZE  (16*W25Q16_SECTOR_SIZE)
+#define W25Q16_SIZE        (32*W25Q16_BLOCK_SIZE)
+ 
+#define MOSI_H					 (GpioDataRegs.GPASET.bit.GPIO16 = 1)
+#define MOSI_L					 (GpioDataRegs.GPACLEAR.bit.GPIO16 = 1)
+#define SPICLK_H				 (GpioDataRegs.GPASET.bit.GPIO17 = 1)
+#define SPICLK_L				 (GpioDataRegs.GPACLEAR.bit.GPIO17 = 1)
+ 
+#define FLASH_CS_SET			(GpioDataRegs.AIOSET.bit.AIO12  = 1)
+#define FLASH_CS_RESET		    (GpioDataRegs.AIOCLEAR.bit.AIO12  = 1)
+ 
+#define READ_MISO GpioDataRegs.GPADAT.bit.GPIO6
+ 
+const Uint8 byDUMMY = 0xff;
+ 
+void SPI_Init(void)
+{
+	FLASH_CS_SET;
+	SPICLK_L;
+	MOSI_H;
+}
+ 
+static void SPI_Set_MOSI(Uint8 val)
+{
+	if(val)
+		MOSI_H;
+	else
+		MOSI_L;
+}
+ 
+/*******************************************************************************
+* Function Name  : SPIReadWriteByte
+* Description    : SPI读写函数
+* Input          : val 		传输数据
+* Output         : RevData  接收数据
+* Return         : None
+*******************************************************************************/
+static Uint8 SPIReadWriteByte(Uint8 val)
+{
+	Uint16 i;
+	Uint8  RevData = 0;
+	//Uint16 wReadDO;
+	for(i=0; i<8; i++)
+	{
+		SPICLK_L;
+		SPI_Set_MOSI(val & 0x80);
+		DSP28x_usDelay(1);
+		val <<= 1;
+ 
+		SPICLK_H;
+		RevData <<= 1;
+ 
+		//wReadDO = GpioDataRegs.GPADAT.bit.GPIO6;
+		RevData |=READ_MISO;
+		DSP28x_usDelay(1);
+	}
+	return RevData;
+}
+ 
+/*******************************************************************************
+* Function Name  : W25Q16_ReadWriteDate
+* Description    : SPIFLASH 读写函数
+* Input          : None
+* Output         : None
+* Return         : None
+*******************************************************************************/
+Uint8 W25Q16_ReadWriteDate(Uint8 val)
+{
+	return SPIReadWriteByte(val);
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q64_WriteEnable
+* Description    : 写使能
+* Input          : None
+* Output         : None
+* Return         : None
+*******************************************************************************/
+void W25q16_WriteEnable(void)
+{
+	FLASH_CS_RESET;
+	W25Q16_ReadWriteDate(0x06);
+	FLASH_CS_SET;
+}
+ 
+/*******************************************************************************
+* Function Name  : W25Q16_WaitForWriteEnd
+* Description    : 等待FLASH内部时序操作完成
+* Input          : None
+* Output         : None
+* Return         : None
+*******************************************************************************/
+void W25Q16_WaitForWriteEnd(void)
+{
+    Uint8 status = 0;
+ 
+    FLASH_CS_RESET;
+ 
+    W25Q16_ReadWriteDate(0x05);
+ 
+    do
+    {
+    	status = W25Q16_ReadWriteDate(byDUMMY);
+    }
+    while((status & 0x01) == 1);
+ 
+    FLASH_CS_SET;
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q16_WriteStatusReg1
+* Description    : 写状态寄存器1
+* Input          : status:状态值
+* Output         : None
+* Return         : None
+*******************************************************************************/
+void W25q16_WriteStatusReg1(Uint16 status)
+{
+	W25q16_WriteEnable();
+ 
+	FLASH_CS_RESET;
+ 
+	W25Q16_ReadWriteDate(0x01);
+	W25Q16_ReadWriteDate(status & 0xFF);
+	W25Q16_ReadWriteDate((status>>8) & 0xFF);
+	FLASH_CS_SET;
+ 
+	W25Q16_WaitForWriteEnd();
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q16_ReadStatus
+* Description    : 读状态寄存器
+* Input          : None
+* Output         : None
+* Return         : 状态寄存器值
+*******************************************************************************/
+Uint16 W25q16_ReadStatus(void)
+{
+	Uint16 status=0;
+	FLASH_CS_RESET;
+ 
+	W25Q16_ReadWriteDate(0x05);
+	status = W25Q16_ReadWriteDate(byDUMMY);
+ 
+	FLASH_CS_SET;
+ 
+	FLASH_CS_RESET;
+	W25Q16_ReadWriteDate(0x35);
+	status |= W25Q16_ReadWriteDate(byDUMMY)<<8;
+	FLASH_CS_SET;
+ 
+	return status;
+}
+ 
+ 
+/*******************************************************************************
+* Function Name  : W25q16_ReadDeviceID
+* Description    : 读芯片ID
+* Input          : None
+* Output         : None
+* Return         : None
+*******************************************************************************/
+Uint16 W25q16_ReadDeviceID(void)
+{
+	Uint8 DeviceID=0;
+ 
+	FLASH_CS_RESET;
+ 
+	W25Q16_ReadWriteDate(0xAB);
+	W25Q16_ReadWriteDate(byDUMMY);
+	W25Q16_ReadWriteDate(byDUMMY);
+	W25Q16_ReadWriteDate(byDUMMY);
+ 
+	DeviceID = W25Q16_ReadWriteDate(0X00);
+ 
+	FLASH_CS_SET;
+ 
+	return DeviceID;
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q16_ReadJEDE_ID
+* Description    : 读芯片ID
+* Input          : None
+* Output         : None
+* Return         : None
+*******************************************************************************/
+Uint16 W25q16_ReadJEDE_ID(void)
+{
+	Uint16 DeviceID=0;
+ 
+	FLASH_CS_RESET;
+ 
+	W25Q16_ReadWriteDate(0x9F);
+	W25Q16_ReadWriteDate(byDUMMY);
+//	W25Q16_ReadWriteDate(byDUMMY);
+//	W25Q16_ReadWriteDate(0x00);
+ 
+	DeviceID = W25Q16_ReadWriteDate(byDUMMY)<<8;
+	DeviceID |= W25Q16_ReadWriteDate(byDUMMY);
+ 
+	FLASH_CS_SET;
+ 
+	return DeviceID;
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q16_Read
+* Description    : 读数据
+* Input          : buf:数据缓冲区
+                   len:长度
+                   addr:起始地址
+* Output         : None
+* Return         : None
+*******************************************************************************/
+void W25q16_Read(Uint8 *buf, Uint32 len, Uint32 addr)
+{
+	Uint32 i;
+	FLASH_CS_RESET;
+	W25Q16_ReadWriteDate(0x03);
+	W25Q16_ReadWriteDate((addr & 0xFF0000)>>16);
+	W25Q16_ReadWriteDate((addr & 0x00FF00)>>8);
+	W25Q16_ReadWriteDate(addr & 0xFF);
+	for (i=0; i<len; i++)
+	{
+	  buf[i] = W25Q16_ReadWriteDate(byDUMMY);
+	}
+	FLASH_CS_SET;
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q16_4KErase
+* Description    : 4K片擦除
+* Input          : addr:起始地址
+* Output         : None
+* Return         : None
+*******************************************************************************/
+void  W25q16_4KErase(Uint32 addr)
+{
+	W25q16_WriteEnable();
+ 
+	FLASH_CS_RESET;
+ 
+	W25Q16_ReadWriteDate(0x20);
+	W25Q16_ReadWriteDate((addr & 0xFF0000)>>16);
+	W25Q16_ReadWriteDate((addr & 0x00FF00)>>8);
+	W25Q16_ReadWriteDate(addr & 0xFF);
+ 
+	FLASH_CS_SET;
+ 
+	W25Q16_WaitForWriteEnd();
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q16_32KErase
+* Description    : 32K片擦除
+* Input          : addr:起始地址
+* Output         : None
+* Return         : None
+*******************************************************************************/
+void  W25q16_32KErase(Uint32 addr)
+{
+	W25q16_WriteEnable();
+ 
+	FLASH_CS_RESET;
+ 
+	W25Q16_ReadWriteDate(0x52);
+	W25Q16_ReadWriteDate((addr & 0xFF0000)>>16);
+	W25Q16_ReadWriteDate((addr & 0x00FF00)>>8);
+	W25Q16_ReadWriteDate(addr & 0xFF);
+ 
+	FLASH_CS_SET;
+ 
+	W25Q16_WaitForWriteEnd();
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q16_64KErase
+* Description    : 64K片擦除
+* Input          : addr:起始地址
+* Output         : None
+* Return         : None
+* Date           : 2014-10-24
+* Author         : ADT LL
+*******************************************************************************/
+void  W25q16_64KErase(Uint32 addr)
+{
+	W25q16_WriteEnable();
+ 
+	FLASH_CS_RESET;
+ 
+	W25Q16_ReadWriteDate(0xD8);
+	W25Q16_ReadWriteDate((addr & 0xFF0000)>>16);
+	W25Q16_ReadWriteDate((addr & 0x00FF00)>>8);
+	W25Q16_ReadWriteDate(addr & 0xFF);
+ 
+	FLASH_CS_SET;
+ 
+	W25Q16_WaitForWriteEnd();
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q16_PageProgram
+* Description    : 页写
+* Input          : buf:要写内的数据
+                   len:数据长度
+                   add:起始地址
+* Output         : None
+* Return         : 状态码
+*******************************************************************************/
+static void W25q16_PageProgram(Uint8 *buf, Uint16 len, Uint32 addr)
+{
+    //是否判断len 与addr 超限问题？？？
+	//......
+ 
+	W25q16_WriteEnable();
+ 
+	FLASH_CS_RESET;
+ 
+	W25Q16_ReadWriteDate(0x02);
+	W25Q16_ReadWriteDate((addr & 0xFF0000)>>16);
+	W25Q16_ReadWriteDate((addr & 0x00FF00)>>8);
+	W25Q16_ReadWriteDate(addr & 0xFF);
+ 
+	while (len--)
+	{
+		W25Q16_ReadWriteDate(*buf);
+		buf++;
+	}
+ 
+	FLASH_CS_SET;
+ 
+	W25Q16_WaitForWriteEnd();
+}
+ 
+/*******************************************************************************
+* Function Name  : W25q64_Write
+* Description    : 数据存储
+* Input          : buf:要写内的数据
+                   len:数据长度
+                   add:起始地址
+* Output         : None
+* Return         : None
+*******************************************************************************/
+void W25q16_Write(Uint8 *buf, Uint16 len, Uint32 addr)
+{
+	Uint8 pagenum;
+	Uint8 addrbyte;//最低八位地址
+ 
+	addrbyte = addr%W25Q16_PAGE_SIZE;
+	if (len > (W25Q16_PAGE_SIZE - addrbyte))//跨页了
+	{
+		W25q16_PageProgram(buf, W25Q16_PAGE_SIZE - addrbyte, addr);//写满本页
+		addr += W25Q16_PAGE_SIZE-addrbyte;
+		buf += W25Q16_PAGE_SIZE-addrbyte;
+		len -= W25Q16_PAGE_SIZE-addrbyte;
+		pagenum = len/W25Q16_PAGE_SIZE;
+ 
+		while (pagenum--)
+		{
+			W25q16_PageProgram(buf, W25Q16_PAGE_SIZE, addr);
+			addr += W25Q16_PAGE_SIZE;
+			buf += W25Q16_PAGE_SIZE;
+			len -= W25Q16_PAGE_SIZE;
+		}
+		W25q16_PageProgram(buf, len, addr);
+	}
+	else
+	{
+		W25q16_PageProgram(buf, len, addr);
+	}
+}
+ 
+————————————————
+
+                            版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。
+                        
+原文链接：https://blog.csdn.net/qq_36942229/article/details/103481503
+void LAN1_Gpio(void)
+{
+    //mcbspb 做spi， 
+    EALLOW;
+
+    GpioCtrlRegs.GPAPUD.bit.GPIO24 = 0;   // Enable pull-up on GPIO24 (SPISIMO)
+    GpioCtrlRegs.GPAPUD.bit.GPIO25 = 0;   // Enable pull-up on GPIO25 (SPISOMI)
+    GpioCtrlRegs.GPAPUD.bit.GPIO26 = 0;   // Enable pull-up on GPIO26 (SPICLK)
+
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO24 = 3; // Asynch input GPIO24 (SPISIMO)
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO25 = 3; // Asynch input GPIO25 (SPISOMI)
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO26 = 3; // Asynch input GPIO26 (SPICLK)
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO27 = 3; // Asynch input GPIO27 (SPISTE)
+//下面的值是3
+    GpioCtrlRegs.GPAMUX2.bit.GPIO24 = 3;  // Configure GPIO24 as SPISIMO
+    GpioCtrlRegs.GPAMUX2.bit.GPIO25 = 3;  // Configure GPIO25 as SPISOMI
+    GpioCtrlRegs.GPAMUX2.bit.GPIO26 = 3;  // Configure GPIO26 as SPICLK
+
+
+    //Configure GPIO49 as  RESET
+    GpioCtrlRegs.GPBPUD.bit.GPIO49 = 0;// Enable pullup
+    GpioDataRegs.GPBSET.bit.GPIO49 = 1;   // Load output latch
+    GpioCtrlRegs.GPBMUX2.bit.GPIO49 = 0;  // 
+    GpioCtrlRegs.GPBDIR.bit.GPIO49 = 1;   // GPIO49 = output
+
+    //Configure GPIO27 as SPISTEA
+    GpioCtrlRegs.GPAPUD.bit.GPIO27 = 0;// Enable pullup
+    GpioDataRegs.GPASET.bit.GPIO27 = 1;   // Load output latch
+    GpioCtrlRegs.GPAMUX2.bit.GPIO27 = 0;  // 
+    GpioCtrlRegs.GPADIR.bit.GPIO27 = 1;   // GPIO27 = output
+
+    EDIS;
+
+}
+ 
+
+#define RD =1;//编译控制字根据自己的芯片进行选择
+
+void LAN1_Init()
+{
+    // McBSP register settings
+     McbspbRegs.SPCR2.all=0x0000;        // Reset FS generator, sample rate generator & transmitter
+     McbspbRegs.SPCR1.all=0x0000;        // Reset Receiver, Right justify word, Digital loopback dis.
+     McbspbRegs.PCR.all=0x0F08;           //(CLKXM=CLKRM=FSXM=FSRM= 1, FSXP = 1)
+     McbspbRegs.SPCR1.bit.DLB = 0;
+     McbspbRegs.PCR.bit.CLKXM = 1;
+     McbspbRegs.PCR.bit.CLKRM = 1;
+
+     McbspbRegs.PCR.bit.SCLKME = 0;//SCLKME = 0,CLKSM =1,选择LSPCLK时钟源
+     McbspbRegs.SRGR2.bit.CLKSM = 1;
+     McbspbRegs.SRGR2.bit.FPER = 1;//
+
+     McbspbRegs.PCR.bit.FSRM = 1;//接收帧同步模式
+
+     McbspbRegs.SRGR1.bit.CLKGDV = 1;      // Frame Width = 1 ,CLKG period,一分频2017.12.29
+     McbspbRegs.SRGR1.bit.FWID = 0;      // Frame Width = 1 CLKG period
+
+   #if RND
+     McbspbRegs.SPCR1.bit.CLKSTP = 2;    // Together with CLKXP/CLKRP determines clocking scheme
+     McbspbRegs.PCR.bit.CLKXP = 0;       // CPOL = 0, CPHA = 0
+     McbspbRegs.PCR.bit.CLKRP = 0;
+   #endif
+   #if RD
+     McbspbRegs.SPCR1.bit.CLKSTP = 3;    // Together with CLKXP/CLKRP determines clocking scheme
+     McbspbRegs.PCR.bit.CLKXP = 0;       // CPOL = 0, CPHA = 1
+     McbspbRegs.PCR.bit.CLKRP = 1;
+   #endif
+   #if FND
+     McbspbRegs.SPCR1.bit.CLKSTP = 2;    // Together with CLKXP/CLKRP determines clocking scheme
+     McbspbRegs.PCR.bit.CLKXP = 1;       // CPOL = 1, CPHA = 0
+     McbspbRegs.PCR.bit.CLKRP = 0;
+   #endif
+   #if FD
+     McbspbRegs.SPCR1.bit.CLKSTP = 3;    // Together with CLKXP/CLKRP determines clocking scheme
+     McbspbRegs.PCR.bit.CLKXP = 1;       // CPOL = 1, CPHA = 1
+     McbspbRegs.PCR.bit.CLKRP = 1;
+   #endif
+
+     McbspbRegs.RCR2.all=0x0001;         // Single-phase frame, 1 word/frame, No companding  (Receive)
+     McbspbRegs.RCR1.all=0x0000;          // Default 8-bits per word. Note, phase 2 bits should be ignored.
+
+     McbspbRegs.XCR2.all=0x0001;         // Single-phase frame, 1 word/frame, No companding  (Transmit)
+     McbspbRegs.XCR1.all=0x0000;         // Default 8-bits per word. Note, phase 2 bits should be ignored.
+
+     McbspbRegs.SRGR2.all=0x2000;        // CLKSM=1, FPER = 2^6 CLKG periods
+     McbspbRegs.SRGR1.all=0x000F;        // Frame Width = 1 CLKG period, CLKGDV=2
+     McbspbRegs.SPCR1.bit.DXENA=1;
+     McbspbRegs.SPCR2.bit.XINTM = 0;
+     McbspbRegs.SPCR1.bit.RINTM = 0;
+     McbspbRegs.MFFINT.bit.RINT = 0;
+     McbspbRegs.XCR2.bit.XDATDLY = 1;//1位延迟位,stop mode 必须置1
+     McbspbRegs.RCR2.bit.RDATDLY = 1;//1位延迟位，stop mode 必须置1
+     McbspbRegs.RCR1.bit.RWDLEN1=0;     // 16-bit word
+     McbspbRegs.XCR1.bit.XWDLEN1=0;     // 16-bit word
+     delay_loop();
+     McbspbRegs.SPCR2.all |=0x00C1;      // Frame sync & sample rate generators pulled out of reset
+     McbspbRegs.SPCR2.bit.FRST=1;         // Frame Sync Generator reset
+     McbspbRegs.SPCR2.bit.XRST=1;        // Enable Transmitter
+     McbspbRegs.SPCR1.bit.RRST=1;        // Enable Receiver
+
+}
+
+注意：spi虽然配置为8bit收发，但是dsp是16位收发，而且dsp在发数据时候是高位数据有效，收数据是低位数据有效。
+
+第二种方式：自带的spi配置
+—————————————————–dsp自带的spi配置————————————————————
+
+/******************************************************************************
+*  FUNCTION初始化外围接口
+*  LAN2初始化对应SPIB总线
+*  1、MISO\MOSI\CLK引脚初始化
+*  2、设置CS片选，高电平输出
+******************************************************************************/
+void LAN2_Gpio(void)
+{
+    EALLOW;
+    GpioCtrlRegs.GPBPUD.bit.GPIO54 = 0;   // Enable pull-up on GPIO54 (SPISIMOA)
+    GpioCtrlRegs.GPBPUD.bit.GPIO55 = 0;   // Enable pull-up on GPIO55 (SPISOMIA)
+    GpioCtrlRegs.GPBPUD.bit.GPIO56 = 0;   // Enable pull-up on GPIO56 (SPICLKA)
+
+
+    GpioCtrlRegs.GPBQSEL2.bit.GPIO54 = 3; // Asynch input GPIO54 (SPISIMOA)
+    GpioCtrlRegs.GPBQSEL2.bit.GPIO55 = 3; // Asynch input GPIO55 (SPISOMIA)
+    GpioCtrlRegs.GPBQSEL2.bit.GPIO56 = 3; // Asynch input GPIO56 (SPICLKA)
+    GpioCtrlRegs.GPBQSEL2.bit.GPIO57 = 3; // Asynch input GPIO57 (SPISTEA)
+
+    GpioCtrlRegs.GPBMUX2.bit.GPIO54 = 1;  // Configure GPIO54 as SPISIMOA
+    GpioCtrlRegs.GPBMUX2.bit.GPIO55 = 1;  // Configure GPIO55 as SPISOMIA
+    GpioCtrlRegs.GPBMUX2.bit.GPIO56 = 1;  // Configure GPIO56 as SPICLKA
+
+    //Configure GPIO53 as RESET
+    GpioCtrlRegs.GPBPUD.bit.GPIO53 = 0;// Enable pullup
+    GpioDataRegs.GPBSET.bit.GPIO53 = 1;   // Load output latch
+    GpioCtrlRegs.GPBMUX2.bit.GPIO53 = 0;  // GPIO57 = GPIO57
+    GpioCtrlRegs.GPBDIR.bit.GPIO53 = 1;   // GPIO57 = output
+
+    //Configure GPIO57 as SPISTEA
+    GpioCtrlRegs.GPBPUD.bit.GPIO57 = 0;// Enable pullup
+    GpioDataRegs.GPBSET.bit.GPIO57 = 1;   // Load output latch
+    GpioCtrlRegs.GPBMUX2.bit.GPIO57 = 0;  // GPIO57 = GPIO57
+    GpioCtrlRegs.GPBDIR.bit.GPIO57 = 1;   // GPIO57 = output
+
+
+    EDIS;
+
+}
+
+void LAN2_Init()
+{
+    SpiaRegs.SPICCR.all =0x0007;        //Reset off, rising edge, 8-bit char bits
+    SpiaRegs.SPICTL.all =0x000e;        //Enable master mode, delayed phase,
+                                        //enable talk, and SPI int disabled.
+    SpiaRegs.SPIBRR =0x0063;            //LSP37.5M 波特率=37.5/（BRR+1）  波特率设置为375000
+    SpiaRegs.SPISTS.all=0x0000;         //清标志
+    SpiaRegs.SPICCR.all =0x0087;        //Relinquish SPI from Reset
+    SpiaRegs.SPIPRI.bit.FREE = 0x0001;       //Transmission not affected by emulator
+    SpiaRegs.SPICCR.bit.SPISWRESET=1;           // SPI软复位//-------------2018/7/17缺少就会接收卡死
+}
+
+两种模式的收发也是不一样的，稍注意下。
+各种细节都在代码里了，根据要驱动的芯片进行改动即可，如果是w5500、w5200等以太网芯片，直接可用。
+关于驱动dsp驱动12864等，主要是控制上电时序，引脚电平，配置spi。细节不再多讲。
+
+
+};
+
+
+
+struct  MCBSP_REGS {
+   union DRR2_REG    DRR2;       // MCBSP Data receive register bits 31-16
+   union DRR1_REG    DRR1;       // MCBSP Data receive register bits 15-0
+   union DXR2_REG    DXR2;       // MCBSP Data transmit register bits 31-16
+   union DXR1_REG    DXR1;       // MCBSP Data transmit register bits 15-0
+   union SPCR2_REG   SPCR2;      // MCBSP control register bits 31-16
+   union SPCR1_REG   SPCR1;      // MCBSP control register bits 15-0
+   union RCR2_REG    RCR2;       // MCBSP receive control register bits 31-16
+   union RCR1_REG    RCR1;       // MCBSP receive control register bits 15-0
+   union XCR2_REG    XCR2;       // MCBSP transmit control register bits 31-16
+   union XCR1_REG    XCR1;       // MCBSP transmit control register bits 15-0
+   union SRGR2_REG   SRGR2;      // MCBSP sample rate gen register bits 31-16
+   union SRGR1_REG   SRGR1;      // MCBSP sample rate gen register bits 15-0
+   union MCR2_REG    MCR2;       // MCBSP multichannel register bits 31-16
+   union MCR1_REG    MCR1;       // MCBSP multichannel register bits 15-0
+   union RCERA_REG   RCERA;      // MCBSP Receive channel enable partition A
+   union RCERB_REG   RCERB;      // MCBSP Receive channel enable partition B
+   union XCERA_REG   XCERA;      // MCBSP Transmit channel enable partition A
+   union XCERB_REG   XCERB;      // MCBSP Transmit channel enable partition B
+   union PCR_REG     PCR;        // MCBSP Pin control register bits 15-0
+   union RCERC_REG   RCERC;      // MCBSP Receive channel enable partition C
+   union RCERD_REG   RCERD;      // MCBSP Receive channel enable partition D
+   union XCERC_REG   XCERC;      // MCBSP Transmit channel enable partition C
+   union XCERD_REG   XCERD;      // MCBSP Transmit channel enable partition D
+   union RCERE_REG   RCERE;      // MCBSP Receive channel enable partition E
+   union RCERF_REG   RCERF;      // MCBSP Receive channel enable partition F
+   union XCERE_REG   XCERE;      // MCBSP Transmit channel enable partition E
+   union XCERF_REG   XCERF;      // MCBSP Transmit channel enable partition F
+   union RCERG_REG   RCERG;      // MCBSP Receive channel enable partition G
+   union RCERH_REG   RCERH;      // MCBSP Receive channel enable partition H
+   union XCERG_REG   XCERG;      // MCBSP Transmit channel enable partition G
+   union XCERH_REG   XCERH;      // MCBSP Transmit channel enable partition H
+   Uint16            rsvd1[4];   // reserved
+   union MFFINT_REG  MFFINT;     // MCBSP Interrupt enable register for RINT/XINT
+   Uint16            rsvd2;      // reserved
+};
+
+
+void InitMcbspaGpio(void)
+{
+	EALLOW;
+
+/* Configure McBSP-A pins using GPIO regs*/
+// This specifies which of the possible GPIO pins will be McBSP functional pins.
+// Comment out other unwanted lines.
+
+	GpioCtrlRegs.GPAMUX2.bit.GPIO20 = 2;	// GPIO20 is MDXA pin  MOSI
+	GpioCtrlRegs.GPAMUX2.bit.GPIO21 = 2;	// GPIO21 is MDRA pin  MISO
+    GpioCtrlRegs.GPAMUX2.bit.GPIO22 = 2;	// GPIO22 is MCLKXA pin  CLK
+    
+   
+   
+    GpioCtrlRegs.GPAMUX2.bit.GPIO23 = 0;	// GPIO23 is MFSXA pin普通IO？
+	GpioCtrlRegs.GPADIR.bit.GPIO23 = 1;      //1为输出
+    //GpioCtrlRegs.GPAMUX1.bit.GPIO5 = 2;		// GPIO5 is MFSRA pin (Comment as needed)
+	//GpioCtrlRegs.GPBMUX2.bit.GPIO59 = 1;	// GPIO59 is MFSRA pin (Comment as needed)
+	
+//SPI-FLASH    ƶ 
+	GpioCtrlRegs.GPAMUX1.bit.GPIO5 = 0;
+	GpioCtrlRegs.GPADIR.bit.GPIO5 = 1;
+	GpioCtrlRegs.GPAMUX2.bit.GPIO24 = 0;	
+	GpioCtrlRegs.GPADIR.bit.GPIO24 = 1;
+//	
+
+/* Enable internal pull-up for the selected pins */
+// Pull-ups can be enabled or disabled by the user.
+// This will enable the pullups for the specified pins.
+// Comment out other unwanted lines.
+
+	GpioCtrlRegs.GPAPUD.bit.GPIO20 = 0;     // Enable pull-up on GPIO20 (MDXA)
+	GpioCtrlRegs.GPAPUD.bit.GPIO21 = 0;     // Enable pull-up on GPIO21 (MDRA)
+	GpioCtrlRegs.GPAPUD.bit.GPIO22 = 0;     // Enable pull-up on GPIO22 (MCLKXA)
+	//GpioCtrlRegs.GPAPUD.bit.GPIO7 = 0;      // Enable pull-up on GPIO7 (MCLKRA) (Comment as needed)
+	//GpioCtrlRegs.GPBPUD.bit.GPIO58 = 0;   // Enable pull-up on GPIO58 (MCLKRA) (Comment as needed)
+//	GpioCtrlRegs.GPAPUD.bit.GPIO23 = 0;     // Enable pull-up on GPIO23 (MFSXA)
+	//GpioCtrlRegs.GPAPUD.bit.GPIO5 = 0;      // Enable pull-up on GPIO5 (MFSRA) (Comment as needed)
+	//GpioCtrlRegs.GPBPUD.bit.GPIO59 = 0;   // Enable pull-up on GPIO59 (MFSRA) (Comment as needed)
+
+/* Set qualification for selected input pins to asynch only */
+// This will select asynch (no qualification) for the selected pins.
+// Comment out other unwanted lines.
+
+
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO21 = 3;   // Asynch input GPIO21 (MDRA)
+    GpioCtrlRegs.GPAQSEL2.bit.GPIO22 = 3;   // Asynch input GPIO22 (MCLKXA)
+    //GpioCtrlRegs.GPAQSEL1.bit.GPIO7 = 3;    // Asynch input GPIO7 (MCLKRA) (Comment as needed)
+    //GpioCtrlRegs.GPBQSEL2.bit.GPIO58 = 3; // Asynch input GPIO58(MCLKRA) (Comment as needed)
+   // GpioCtrlRegs.GPAQSEL2.bit.GPIO23 = 3;   // Asynch input GPIO23 (MFSXA)
+    //GpioCtrlRegs.GPAQSEL1.bit.GPIO5 = 3;    // Asynch input GPIO5 (MFSRA) (Comment as needed)
+    //GpioCtrlRegs.GPBQSEL2.bit.GPIO59 = 3; // Asynch input GPIO59 (MFSRA) (Comment as needed)
+
+	EDIS;
+
+}
+
+以下是DSP28335的McBSP配置为SPI接口的DMA的收发配置程序，仅供参考：
+
+#include "DSP2833x_Device.h"
+
+#include "DSP2833x_Examples.h"
+
+// 定义引脚配置宏
+
+#define McBSP_SPI_PIN_CONFIG() \
+
+    GpioCtrlRegs.GPAMUX2.bit.GPIO30 = 1; // CLKX操作模式
+
+    GpioCtrlRegs.GPAMUX2.bit.GPIO31 = 1; // CLKR操作模式
+
+    GpioCtrlRegs.GPBGMUX2.bit.GPIO58 = 1; // DX操作模式
+
+    GpioCtrlRegs.GPBMUX2.bit.GPIO58 = 1;
+
+// 定义DMA配置宏
+
+#define McBSP_SPI_DMA_CONFIG(ch) \
+
+    DmaRegs.CH##ch##ADDR = (Uint32)&McBSP1_DXR; // DMA传输地址
+
+    DmaRegs.CH##ch##BURST_SIZE.all = 0x1; // 一次传输一个数据
+
+    DmaRegs.CH##ch##TRANSFER_SIZE = DMA_TRANSFER_SIZE; // DMA传输大小
+
+    DmaRegs.CH##ch##CONTROL.bit.PERINTFRC = 0; // 禁用DMA传输完成中断
+
+    DmaRegs.CH##ch##CONTROL.bit.ERRCLR = 1; // 清除DMA传输错误标志
+
+    DmaRegs.CH##ch##CONTROL.bit.SYNCCLR = 1; // 清除DMA传输同步标志
+
+    DmaRegs.CH##ch##CONTROL.bit.TRANSFER_COMPLETE = 0; // DMA传输未完成
+
+    DmaRegs.CH##ch##CONTROL.bit.DEST_TRANSFER_MODE = 0; // 目标传输模式为离散传输
+
+    DmaRegs.CH##ch##CONTROL.bit.SRC_TRANSFER_MODE = 1; // 源传输模式为循环传输
+
+    DmaRegs.CH##ch##CONTROL.bit.DST_AMODE = 0x0; // 目标地址模式为增量模式
+
+    DmaRegs.CH##ch##CONTROL.bit.SRC_AMODE = 0x3; // 源地址模式为同步模式
+
+
+    DmaRegs.CH##ch##CONTROL.bit.DST_BURST = 0x0; // 目标传输突发大小为1
+
+    DmaRegs.CH##ch##CONTROL.bit.SRC_BURST = 0x1; // 源传输突发大小为32
+
+    DmaRegs.CH##ch##CONTROL.bit.TTYPE = 0x1; // 传输类型为循环传输
+
+    DmaRegs.CH##ch##CONTROL.bit.MODE = 0x1; // 触发模式为软件触发
+
+// 定义SPI发送数据函数
+
+void McBSP_SPI_SendData(Uint16 data)
+
+{
+
+    // 等待发送寄存器为空
+
+    while((McBSP1_SPCR2 & 0x0010) != 0);
+
+    // 向发送寄存器写入数据
+
+    McBSP1_DXR = data;
+
+}
+
+// 定义DMA传输函数
+
+void McBSP_SPI_TransferData(Uint16 *src, Uint16 *dst, Uint16 size)
+
+{
+
+    // 配置DMA传输源和目标地址
+
+    DmaRegs.CH5SRCADDR = (Uint32)src;
+
+    DmaRegs.CH4DESTADDR = (Uint32)dst;
+
+    // 配置DMA传输大小
+
+    DmaRegs.CH5TRANSFER_SIZE = size;
+
+    DmaRegs.CH4TRANSFER_SIZE = size;
+
+    // 使能DMA传输
+
+    DmaRegs.CH5CONTROL.bit.CHDMAEN = 1;
+
+    DmaRegs.CH4CONTROL.bit.CHDMAEN = 1;
+
+    // 触发DMA传输
+
+    DmaRegs.CH5CONTROL.bit.TRANSFER_COMPLETE = 1;
+
+    DmaRegs.CH4CONTROL.bit.TRANSFER_COMPLETE = 1;
+
+}
+
+// 主程序
+
+void main()
+
+{
+
+    // 初始化系统时钟
+
+    InitSysCtrl();
+
+    // 初始化GPIO
+
+    InitGpio();
+
+    // 配置McBSP为SPI接口
+
+    EALLOW;
+
+    // 配置SPI接口时钟
+
+    McBSP1_SPCR2 = 0x0200;
+
+    // 配置SPI接口数据位宽
+
+    McBSP1_RCR2.bit.RWDLEN2 = 0x7;
+
+    // 配置SPI接口传输模式为主机模式
+
+    McBSP1_SPCR2.bit.SPIMODE = 0x1;
+
+    // 配置SPI接口帧同步信号
+
+    McBSP1_SPCR2.bit.FSGM = 0x1;
+
+    // 配置SPI接口时钟同步模式
+
+    McBSP1_SPCR2.bit.CLKSTP = 0x1;
+
+    // 配置SPI接口数据传输模式
+
+    McBSP1_SPCR2.bit.XDATDLY = 0x1;
+
+    // 配置SPI接口传输完毕中断
+
+    McBSP1_SPCR2.bit.XRDY = 0x1;
+
+    // 配置SPI接口DMA传输
+
+    McBSP1_SPCR2.bit.XINTM = 0x0;
+
+    McBSP1_SPCR2.bit.XDMAEN = 0x1;
+
+    // 配置SPI接口DMA中断
+
+    IER |= M_INT5;
+
+    EINT;
+
+    // 配置SPI接口引脚
+
+    McBSP_SPI_PIN_CONFIG();
+
+    // 配置DMA传输
+
+    McBSP_SPI_DMA_CONFIG(5);
+
+    McBSP_SPI_DMA_CONFIG(4);
+
+    // 延时
+
+    DELAY_US(1);
+
+    // 启用McBSP
+
+    McBSP1_SPCR2.bit.XRST = 0x1;
+
+    McBSP1_SPCR1.bit.RRST = 0x1;
+
+    while(1)
+
+    {
+
+        // 发送数据
+
+        McBSP_SPI_SendData(0x1234);
+
+        // 接收数据
+
+        McBSP_SPI_TransferData(&McBSP1_DR, &data, 1);
+
+    }
+
+}
+
+// DMA传输中断服务程序
+
+interrupt void McBSP_SPI_DmaIsr()
+
+{
+
+    // 清除DMA传输完成标志
+
+    DmaRegs.CH5CONTROL.bit.TRANSFER_COMPLETE = 0;
+
+    DmaRegs.CH4CONTROL.bit.TRANSFER_COMPLETE = 0;
+
+    // 执行DMA传输完毕后的操作
+
+    // ...
+
+    // 清除SPI接口传输完毕中断标志
+
+    McBSP1_SPCR2.bit.XRDY = 0x1;
+
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP5;
+
+}
+
+ 发布于 1 年前
+
+
+本站已为你智能检索到如下内容，以供参考：
+🐻 相关问答 4 个
+STM32G0系列的SPI DMA 如何配置？
+使用DSP28335的GPIO口实现SPI的模拟，与AT25160的SPI接口相连，读取EEPROM
+SPI 配置 Datasize为8bit，但是收发时仍然看到DR高8位有值
+AD9364 SPI 寄存器配置
+公众号：1024技术圈
+
+📢 提供互联网知识和资讯，分享IT前沿技术，热门资源，大厂面试题 🔔
+
+
+
+Copyright © 2011-2020 我爱学习网.
+
+法律声明 违版必究 资料版权 作者所有
+
+要将TMS320F28335的McBSP配置为SPI从机模式，‌需要进行一系列的寄存器设置。‌以下是一些关键的配置步骤和注意事项：‌
+
+设置时钟极性和时钟相位：‌
+
+CLKSTP位用于设置时钟相位（‌CPHA）‌。‌当CLKSTP=2或3时，‌McBSP的SPI功能被使能，‌时钟停止模式开启。‌CLKSTP=2时，‌数据传输时时钟立即开启，‌相当于数据采样从第一个时钟边沿开启。‌CLKSTP=3时，‌时钟延迟半个周期，‌即数据采样从第二个时钟边沿开启。‌
+CLKXP和CLKRP位分别用于设置发送和接收数据的时钟极性。‌CLKXP=0表示发送的数据在时钟的上升沿采样，‌CLKXP=1表示发送数据在时钟下降沿采样。‌CLKRP=0表示接收的数据在时钟的下降沿采样，‌CLKRP=1表示接收数据在时钟上升沿采样。‌
+设置主机/从机模式：‌
+
+CLKXM位用于设置McBSP为主机或从机模式。‌当CLKXM=1时，‌McBSP被配置为主机模式；‌当CLKXM=0时，‌McBSP被配置为从机模式。‌
+配置数据传输位数：‌
+
+通过RCR1寄存器中的RWDLEN1和XCR1寄存器中的XWDLEN1来设置发送和接收数据的位数。‌在配置成SPI模式时，‌这两个位应该保持一致，‌以确定传输数据的位数。‌
+设置传输间隔：‌
+
+通过设置RCR2.bit.RDATDLY和XCR2.bit.XDATDLY来配置传输间隔。‌虽然设置为0可以增加传输效率，‌但实际上仍然存在两个时钟的间隔。‌
+配置MCBSP模块时钟分频：‌
+
+通过设置CLKGDV来对McBSP模块的输入时钟进行分频，‌从而控制SPI的波特率。‌
+启用GPIO引脚：‌
+
+确保相关的GPIO引脚被正确配置和启用，‌以便于SPI通信中数据的发送和接收。‌
+通过上述步骤，‌可以有效地将TMS320F28335的McBSP配置为SPI从机模式，‌以实现与主设备的通信12。‌
+
+
+
+
+静态 void BSP_mcbspa_cfg (void)
+｛
+// McBSPA 寄存器设置
+McbspaRegs.SPCR2.all=0x0000；//重置 FS 发生器，采样率发生器和发射器
+McbspaRegs.SPCR1.all=0x0000；//重置接收器，右对齐单词
+McbspaRegs.MFFINT.ALL=0x0；//禁用所有中断
+McbspaRegs.SPCR1.bit.DLB = 0；//启用 DLB 模式。 对非 DLB 模式进行注释。  DX 和 DR 是否内部连接
+McbspaRegs.SPCR1.bit.CLKSTP = 2；//启用时钟停止模式
+McbspaRegs.RCR2.all=0x0；//单相帧，1个字/帧，无压扩(接收)
+McbspaRegs.RCR1.all=0x0；
+McbspaRegs.XCR2.all=0x0；//单相帧，1个字/帧，无压扩(传输)
+McbspaRegs.XCR1.all=0x0；
+McbspaRegs.pcc.bit.FSXM = 1；//=0选择外部帧同步，=1选择内部帧同步信号
+McbspaRegs.pcc.bit.fSRM = 1；//=0选择外部帧同步，=1选择内部帧同步信号
+McbspaRegs.RCR2.bit.RFIG =1；//=1忽略后续同步信号
+McbspaRegs.XCR2.bit.XFIG = 1；//=1忽略后续同步信号
+McbspaRegs.RCR1.bit.RFRLEN1 = 0；//Frame length = X+1
+McbspaRegs.RCR2.bit.RDATDLY=0；//延迟接收=0无延迟，=1延迟一个 CLK，=2延迟两个 CLK
+McbspaRegs.pcc.bit.CLKXM = 1；//=0输入时钟由外部时钟驱动，
+McbspaRegs.pcc.bit.CLKRM = 0；/=0输入时钟由外部时钟驱动，
+McbspaRegs.pcc.bit.CLKRP =1；//=0时钟下缘接收数据。 =1时钟上升边缘接收数据，
+McbspaRegs.pcc.bit.CLKXP =0；//=0时钟上升沿发送数据。 =1时钟下缘发送数据
+McbspaRegs.pcc.bit.FSXP =1；//=1-帧同步脉冲 FSX 处于活动低电平状态。
+McbspaRegs.SRGR2.bit.CLKSM = 1；// CLKSM=1 (如果 SCLKME=0，SRG 的 I/O 时钟为 LSPCLK)，=1表示 McBSP 时钟由 CPU 提供
+McbspaRegs.SRGR1.bit.CLKGDV = 59；// CLKG 频率= LSPCLK/(CLKGDV+1)，时钟设置，LSPCLK = 37.5 MHz，这需要用户使用统一时钟来确定 FPER 值
+
+McbspaRegs.SRGR2.bit.FSGM = 0；
+InitMcbspa16bit()；
+McbspaRegs.SPCR2.bit.GRST=1；//采样率时钟发生器复位停止
+Delay_loop()；//至少等待2个 SRG 时钟周期
+McbspaRegs.SPCR2.Bit.XRST=1；//从重置中释放 TX
+McbspaRegs.SPCR1.bit.RRST=1；//从重置中释放 RX
+延迟循环()；
+McbspaRegs.SPCR2.bit.frst=1；//帧同步发生器重置
+}
+
+
+
+
+
+else if(WrDataAdd == EncoderSumStandBegin)    //检测SumStand
+		 {
+		            if(WrDataEdit == 0)
+		            {
+		                sci_oper_flag.bit.sciSumSON = 0;
+		                sci_oper_status.bit.sciPhaseStatus = 0;
+		                asm("   SETC    INTM");
+		                int_flagx.bit.SciFindInitPhase = 0;
+		                int_flag3.bit.HaveFindInitPos = 0;
+		                int_flag3.bit.pass360 = 0;
+		                asm("   CLRC    INTM");
+		                sci_flag.bit.HOST_undone = 0;                       //   ݲ      
+		            }
+		            else if(WrDataEdit == 1)
+		            {
+		                if(state_flag2.bit.Son || (!state_flag2.bit.SvReady) || state_flag2.bit.HandPhase )
+		                {
+		                    sci_flag.bit.HOST_undone = 1;                   //   ݲ          
+		                    sci_data.Error_mesg = 4;
+		                }
+		                else
+		                {
+		                    sci_oper_flag.bit.sciSumSON = 1;
+		                    sci_oper_status.bit.sciPhaseStatus = 1;
+		                    asm("   SETC    INTM");
+		                    int_flagx.bit.SciFindInitPhase = 0;
+		                    int_flag3.bit.HaveFindInitPos = 0;
+		                    int_flag3.bit.pass360 = 0;
+		                    asm("   CLRC    INTM");
+		                    sci_flag.bit.HOST_undone = 0;                   //   ݲ      
+		                    ComminitPhase=0;             //开始对相时，先清0.有数值后表示对相完毕。
+		                }
+		            }
+		            else
+		            {
+		                sci_flag.bit.HOST_undone = 1;                       //   ݲ          
+		                sci_data.Error_mesg = 4;
+		            }
+	}
+
+
+
+
+
+
+01 06 10  59  30 F0
+
+速度PID   P=220可以高速同步。但单独一个听会有电流声。50没有
+
+state_flag2.bit.HandPhase = 1;
+
+
+
+
