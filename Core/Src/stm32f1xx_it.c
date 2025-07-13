@@ -366,7 +366,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  //2.5ms
 							if((RunFlag))//说明main中正在读被 中断打断，需要下一次中断再写最多延时2.5ms
 							{
 								WriteDSPBusy=1;
-								AdjSpeed(0,NowCommandSPEED);				//关机时先在stop子程序里将NowCommandSpeed=600,然后在此处调速
+								AdjSpeed(0,NowCommandSPEED);				//关机时先在stop子程序里将NowCommandSPEED=600,然后在此处调速
 								//HAL_Delay(3);
 								  //写双DSP无回复，故无法稳步中断里 
 								PreNowCommandSpeed=NowCommandSPEED;
@@ -609,124 +609,94 @@ void TIM6_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   // 输入捕获中断回调函数
 {
+	// 首先，检查中断是否由TIM8触发。TIM8用于处理编码器信号。
 	if((htim->Instance == TIM8)){
 		
+		// 接下来，使用 htim->Channel 来区分是哪个具体的通道触发了中断。
+		// 这允许在同一个回调函数中为不同的事件编写不同的处理逻辑。
+		
+		// --- 分支1: TIM8 通道1中断 ---
+		// 功能: 测量两个电机之间的角度/相位偏差，并执行PID同步校正。
 		if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_1)
 			{
 						if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6)&HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7))
 						{
-							FactError=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_1);//11ʱ�ɼ�10����
+							// 1. 读取由TIM8自身捕获的计数值。这个值代表了两个电机编码器信号的相位差（时间差）。
+							FactError=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_1);
+							
 							if(Fhao==1)
 							{
 									//syncConst=FactError/2;   
 							}
 							else if(Fhao==-1)
 							{
-								//	syncConst=FactError/2;  //��ȡ���е����ֵ
+								//	syncConst=FactError/2;  //获取反向的中点值
 									FactError=-FactError;
-									
-								
 							}
-									//---------------------------------------------
-							//if(FactError >ZerrorMax)FactError=ZerrorMax;//ZerrorMax=FactError;
-							//else if(FactError <FerrorMax)FactError=FerrorMax;//FerrorMax =FactError; 
-							//syncConst=ZerrorMax -(FactError+ -1*FerrorMax)/2;
-							//--------------------------------------------------------------							
-								//	NowError=FactError;//+1500;//-syncConst; 1200
-									BaiFenShu=FactError*1000/CCH2;
-									if(GetDataEn)
-									{		iBaiFenShu[BaiFenShuIndex]=BaiFenShu;
-											if(BaiFenShuIndex<9)BaiFenShuIndex++;
-											else BaiFenShuIndex=0;
-									}
+							
+							// 2. 使用由TIM4测得的周期CCH2来归一化误差，消除速度变化对偏差测量的影响。
+							BaiFenShu=FactError*1000/CCH2;
+							
+							if(GetDataEn)
+							{		iBaiFenShu[BaiFenShuIndex]=BaiFenShu;
+									if(BaiFenShuIndex<9)BaiFenShuIndex++;
+									else BaiFenShuIndex=0;
+							}
 
-									NowError=BaiFenShu-syncConst;//SaveSyncConst;//FactError;//+100;
+							// 3. 计算出最终用于PID控制器的误差。
+							NowError=BaiFenShu-syncConst;
+							
 							if((SyncCOMMAND)&&(FactSpeed>1000))   //同步时会影响 所以只在正常运转用
 							{							
-								//if((NowError>200)|(NowError<-200))NowError=0;  //相当于滤波  正负200会出现 从12000到0时右机-01
 								if((NowError>100)|(NowError<-100))NowError=0;  //相当于滤波
 							}
-							ToCheckError=		NowError;
-							 //----------------PID----------------
-
-									PIDout= PIDencodr(ToCheckError);
-									//if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1))PidSpi=0;
-							//-----------------传输------------------
-                  if(!SyncCOMMAND)
-									{
-										PidSpi=TestPidData;
-									}
-									else PidSpi=PIDout;
-									if(PidSpi>10)PidSpi =10;
-									else if( PidSpi <-10)PidSpi=-10;
-//									SPITxBuffer[1]=0;//PidSpi;  //注意：到对方是XR1 
-//									SPITxBuffer[0]=0;	
-//									HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
-//									HAL_SPI_TransmitReceive_IT(&hspi1,(uint8_t * )&SPITxBuffer,(uint8_t * )&SPIRxBuffer,2); // 传输1个16位
-									
-									SPITxBuffer[0]=PidSpi;	
-									HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
-									HAL_SPI_TransmitReceive_IT(&hspi1,(uint8_t * )&SPITxBuffer,(uint8_t * )&SPIRxBuffer,1); // 传输1个16位
-									
-////									HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_SET);
-							////////////////////////////////////////////
-//							CC1[0]=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_1);
-//							ccsum=CC1[0]+CC1[1]+CC1[2]+CC1[3]; 
-						
+							ToCheckError = NowError;
+							
+							// 4. 执行PID计算，得到修正量。
+							PIDout= PIDencodr(ToCheckError);
+							
+							// 5. 通过高速SPI接口发送PID修正指令，对从电机进行实时同步校正。
+							if(!SyncCOMMAND)
+							{
+								PidSpi=TestPidData;
+							}
+							else PidSpi=PIDout;
+							if(PidSpi>10)PidSpi =10;
+							else if( PidSpi <-10)PidSpi=-10;
+							
+							SPITxBuffer[0]=PidSpi;	
+							HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
+							HAL_SPI_TransmitReceive_IT(&hspi1,(uint8_t * )&SPITxBuffer,(uint8_t * )&SPIRxBuffer,1); // 传输1个16位
 						}
-		//				else if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6)& !HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7))CC1[1]=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_1);
-		//				else if(!HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6)& HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7))CC1[2]=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_1);
-		//				else if(!HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6)& !HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7))CC1[3]=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_1);
-						
-						
-						
-						
-			//-----------------------------------------------
-			
-		}
-		else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
-		{//7��������
-				
-				sh=~sh;
-				//if(sh)HAL_GPIO_WritePin(GPIOD,GPIO_PIN_8,GPIO_PIN_RESET);
-				//else HAL_GPIO_WritePin(GPIOD,GPIO_PIN_8,GPIO_PIN_SET);
-			
-			//	CCH2=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_2);
-			CCH2=__HAL_TIM_GET_COUNTER(&htim4); 
-			__HAL_TIM_SET_COUNTER(&htim4,0);
-      //if(CCH2<800)CCH2=800;
-				 
-				if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6))
-				{	
-					Fhao=1;  //7�����ظ�ʱ��6�Ѿ��Ǹߣ���   ����ǰ
-					//FactError=CC1;//ȡ��һ�֡�
-				}
-				else
-				{
-					Fhao=-1; //7�����ظ�ʱ��6���ǵͣ�7��ǰ�ˡ�
-					
-				}
-				MySpeedCount++;
-		///		FactSpeed=21600000/CCH2;
-			//	TempFactSpeed=21600000/CCH2;    //13333336/CCH2 为小齿轮 // 9600000/CCH2;//36为小齿轮 50为大齿轮1666667*36/50=1200000/CCH2;  *8是因为分频变为9了。
-//	CCHSpeed=21600000/CCH2;
-//				if(FactSpeedIndex<7)FactSpeedIndex++;
-//				else FactSpeedIndex=0;
-//				FactSpeedSub[FactSpeedIndex]=CCH2; 
-				
-				//600=10R/s   每格 1/500    周期。  ( 1/500   /  1s/18000000    )*600
-				
-				
-			
-			
-				
 			}
-		
-		
+		// --- 分支2: TIM8 通道2中断 ---
+		// 功能: 测量单个电机转动一个齿轮齿所需的时间周期，用于计算电机转速。
+		else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
+		{
+			sh=~sh;
+			if(sh)HAL_GPIO_WritePin(GPIOD,GPIO_PIN_8,GPIO_PIN_RESET);
+			else HAL_GPIO_WritePin(GPIOD,GPIO_PIN_8,GPIO_PIN_SET);
+			
+			// 1. 读取自由运行的TIM4的计数值，得到上一个齿到这个齿之间的时间周期。
+			CCH2=__HAL_TIM_GET_COUNTER(&htim4); 
+			
+			// 2. 立刻将TIM4计数器清零，为下一次周期测量做准备。
+			__HAL_TIM_SET_COUNTER(&htim4,0);
+      
+			// 3. 根据编码器信号判断电机转动方向。
+			if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6))
+			{	
+				Fhao=1;  // 7脚边沿来时，6脚已是高，说明...
+			}
+			else
+			{
+				Fhao=-1; // 7脚边沿来时，6脚还是低c，说明...
+			}
+			MySpeedCount++;
 		}
-		
+	}
 }
 
 //---------------------------------EXTI LINE CALLBACK----------------------------------

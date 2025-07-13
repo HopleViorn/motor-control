@@ -1,0 +1,28 @@
+# Keil MDK project files
+MDK-ARM/
+
+# STM32CubeIDE generated files
+.mxproject
+.project
+.cproject
+.settings/
+.launches
+
+# DSP project debug and build directories
+C1C1OK-FOR-bigmoto/master+position/Debug/
+C1C1OK-FOR-bigmoto/Slave/Debug/
+
+# Other common build/output files
+*.hex
+*.bin
+*.elf
+*.map
+*.lst
+*.obj
+*.o
+*.d
+*.suo
+*.user
+*.log
+*.tmp
+*~
