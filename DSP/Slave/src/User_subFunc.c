@@ -4,6 +4,7 @@
 #include "globalvar.h"		//
 #include "SPI4.h"
 
+extern int16 CommandSpeed;
 extern Uint16 xyz;
 extern int16 PositionSpeed;
 extern int16 Masterspeed;
@@ -1185,7 +1186,7 @@ void SJDControl(void)
 
 void ParSpd(void)
 {
-	SPEEDINS = (int16)Pn[ParSpdADD];
+	SPEEDINS = CommandSpeed;//(int16)Pn[ParSpdADD];   //250712 改为由MODBUS改为由SPI传送
 	SPEEDINS *= SpeedUnit;
 //___________________________________
 /*	test2++;
@@ -3304,7 +3305,8 @@ void SModule2(void)
         if(PositionSpeed>3000)PositionSpeed=3000;
         else if(PositionSpeed<-3000)PositionSpeed=-3000;
 
-         e_speed = SPEED - speed-PositionSpeed;//PositionCurrentError;//-syncOut;
+         //e_speed = SPEED - speed-PositionSpeed;//PositionCurrentError;//-syncOut;  int16 CommandSpeed;
+        e_speed = SPEED - speed-PositionSpeed;
 	}
 //=================================================================
 

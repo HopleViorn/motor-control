@@ -632,7 +632,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 							if((SyncCOMMAND)&&(FactSpeed>1000))   //同步时会影响 所以只在正常运转用
 							{							
 								//if((NowError>200)|(NowError<-200))NowError=0;  //相当于滤波  正负200会出现 从12000到0时右机-01
-								if((NowError>100)|(NowError<-100))NowError=0;  //相当于滤波 这里小了有的机子也不同步
+								if((NowError>500)|(NowError<-500))NowError=0;  //相当于滤波
 							}
 							ToCheckError=		NowError;
 							 //----------------PID----------------
@@ -645,7 +645,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 										PidSpi=TestPidData;
 									}
 									else PidSpi=PIDout;
-									if(PidSpi>200)PidSpi =200;    //10有的机子不能同步。现在改为50
+									if(PidSpi>200)PidSpi =200;
 									else if( PidSpi <-200)PidSpi=-200;
 //									SPITxBuffer[1]=0;//PidSpi;  //注意：到对方是XR1 
 //									SPITxBuffer[0]=0;	
@@ -789,7 +789,8 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 	//	if(SyncCOMMAND)Pc485RtuReg[23]=(int16_t)SPIRxBuffer[1]; // 同步时有正负 同步完成后再开这个传输
 	//	MyFactSpeed=	(int16_t)SPIRxBuffer[0];	
 		
-  		FactSpeed=(int16_t)SPIRxBuffer[1];//if(SyncCOMMAND)	
+  		if(SPIRxBuffer[1]!=0x7fff)FactSpeed=(int16_t)SPIRxBuffer[1];//if(SyncCOMMAND)
+	
 		//if(SyncCOMMAND)
 		//{
 				Pc485RtuReg[22]=(int16_t)SPIRxBuffer[0];

@@ -6,7 +6,9 @@
 #include "SPI4.h"
 extern int32 Pd,Pq,Pz;
 extern int32 Spq,Spd,Pcount;
-
+Uint16 OverUCount;
+Uint16 OverVCount;
+int16 myTn;
 int32 temp_x;
 int16 AsSpeed;
 Uint32 MyMaxI=980;//30A
@@ -234,14 +236,34 @@ BIT_DISP led_disp0,led_disp1;
 	       //       if(Iu<Fkkk1)Fkkk1=Iu;
 	       //   }
 		     //       if((Iu>1310)||(Iu<-1310))   //过流 30A //过流 10A       40*24*2048/1500=650
-		      if((Iu>1146)||(Iu<-1146))   //目前980(30A) 12K时一会后报A01
-		            {
-		              state_flag2.bit.HaveAlm = 1;
-		               state_flag2.bit.enPWM=0;//关PWM
-		               Disable_PWM();
-		                alarmno = 01;
+		    //  if((Iu>1146)||(Iu<-1146))   //目前980(30A) 12K时一会后报A01
+		    ///        {
+		    //          state_flag2.bit.HaveAlm = 1;
+		    //           state_flag2.bit.enPWM=0;//关PWM
+		    //           Disable_PWM();
+		    //            alarmno = 01;
 
-		            }
+		    //        }
+
+		                                  if((Iu<1310)&&(Iu>(-1310)))
+		                                  {
+		                                      OverUCount=0;
+		                                  }
+		                                  else
+		                                  {
+		                                      if(OverUCount<3) OverUCount++;
+		                                      else
+		                                      {
+		                                          state_flag2.bit.HaveAlm = 1;
+		                                          state_flag2.bit.enPWM=0;//关PWM
+		                                          Disable_PWM();
+		                                          alarmno = 01;
+		                                      }
+		                                  }
+
+
+
+
 	///////////////////////////////////////////////////////////////////////////////////
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -274,16 +296,30 @@ BIT_DISP led_disp0,led_disp1;
 	                     //{
 	                     //    if(Iv<Fkkk2)Fkkk2=Iv;
 	                     //}
-	        if((Iv>1146)||(Iv<-1146))   //过流 30A
+	   //     if((Iv>1146)||(Iv<-1146))   //过流 30A
 	  //      if((Iv>1146)||(Iv<-1146))   //过流 35A
-	        {
-	            state_flag2.bit.HaveAlm = 1;
-	            state_flag2.bit.enPWM=0;//关PWM
-	            Disable_PWM();
-	           alarmno = 01;
-	        }
+	    //    {
+	   //         state_flag2.bit.HaveAlm = 1;
+	   //         state_flag2.bit.enPWM=0;//关PWM
+	   //         Disable_PWM();
+	   //        alarmno = 01;
+	    //    }
 
-
+	                                        if((Iv<1310)&&(Iv>(-1310)))
+	                                         {
+	                                             OverVCount=0;
+	                                         }
+	                                         else
+	                                         {
+	                                             if(OverVCount<3) OverVCount++;
+	                                             else
+	                                             {
+	                                                 state_flag2.bit.HaveAlm = 1;
+	                                                 state_flag2.bit.enPWM=0;//关PWM
+	                                                 Disable_PWM();
+	                                                 alarmno = 01;
+	                                             }
+	                                         }
 	///////////////////////////////////////////////////////////////////////////////
 
 
@@ -2000,7 +2036,7 @@ void runcur_process(void)
 			{
 		  		Asroate();						// �첽�϶�
 		  		 /////////
-		  	   if(AsTeta==80)
+		  	   if(AsTeta==50)
 		  	                                                       {
 		  	                                                                        AsSpeed=speed;
 		  	                                                       }
@@ -3044,7 +3080,9 @@ int32 tmpAna1,tmpAna2;//,tmpAna3;
 	if(Iqrcount++ >= 1500)
 	{
 		temp_x = SIqr / Iqrcount;
-		Tn = temp_x *100 / Iqn;  //Iqn额定电流
+
+		//myTn=temp_x *1000 / Iqn;   //Iqn额定电流
+		Tn = temp_x *100 / Iqn;
 
 		if (abs(temp_x *100%Iqn) >= Iqn/2)
         {
@@ -3056,6 +3094,7 @@ int32 tmpAna1,tmpAna2;//,tmpAna3;
 		if(membit01.bit.bit00)
 		{
 			Tn = -Tn;
+	//		myTn=-myTn;
 		}
 		Iqrcount = 0;
 	}
@@ -3098,6 +3137,10 @@ int32 tmpAna1,tmpAna2;//,tmpAna3;
 		//watchUnspd=Unspd;
 	}
 #endif
+
+	 McbspbRegs.DXR1.all=Un[Un_Unspd];//(Uint16)(Unspd/10);  //高16位
+	  McbspbRegs.DXR2.all=(Uint16)Tn; //(Uint16) myTn;// Tn;  //低16位由arm低位接收  myTn=10Tn; arm端要除10
+
 	if(memBusSel == 3)
 	{
 		if(membit01.bit.bit00)

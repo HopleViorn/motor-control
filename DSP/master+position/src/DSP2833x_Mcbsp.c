@@ -403,6 +403,116 @@ void init_mcbspb_spi()
 }
 
 
+void SPISLAVEOK(void)
+   {
+       McbspbRegs.SPCR2.all=0x0000; // Reset FS generator, sample rate generator & transmitter
+       McbspbRegs.SPCR1.all=0x0000; // Reset Receiver, Right justify word, Digital loopback dis.
+
+       McbspbRegs.PCR.all=0x0008; //(CLKXM=CLKRM=FSXM=FSRM= 1, FSXP = 1)
+       McbspbRegs.SPCR1.bit.DLB = 0;//loop mode
+       McbspbRegs.SPCR1.bit.CLKSTP = 2; // Together with CLKXP/CLKRP determines clocking scheme
+       McbspbRegs.PCR.bit.CLKXP = 1; // CPOL = 0, CPHA = 0 rising edge no delay//发送上升沿采样
+       McbspbRegs.PCR.bit.CLKRP = 1; //接收下降沿
+       McbspbRegs.RCR2.bit.RDATDLY=0; // FSX setup time 1 in master mode. 0 for slave mode (Receive)
+       McbspbRegs.XCR2.bit.XDATDLY=0; // FSX setup time 1 in master mode. 0 for slave mode (Transmit)
+       McbspbRegs.XCR2.bit.XPHASE=0;
+       McbspbRegs.RCR2.bit.RPHASE=0;
+
+      //McbspbRegs.RCR1.bit.RWDLEN1=2; //32  16-bit word    0 8位 1 12位 2 16位 3 24 4 28   5 32
+      // McbspbRegs.XCR1.bit.XWDLEN1=2; // 16-bit word
+       McbspbRegs.RCR1.bit.RWDLEN1=5; //32  bit word    0 8位 1 12位 2 16位 3 24 4   5 32
+       McbspbRegs.XCR1.bit.XWDLEN1=5; // 32 bit word
+
+       McbspbRegs.RCR1.bit.RFRLEN1=0; //1-word
+       McbspbRegs.XCR1.bit.XFRLEN1=0; // 1 word
+
+       McbspbRegs.SRGR2.bit.CLKSM = 1;   //时间由CPU时钟提供，否则=0时SRG 的 I/O 时钟为 LSPCLK
+        McbspbRegs.SRGR2.bit.FSGM = 0;       // CLKSM=1, FPER = 1 CLKG periods
+
+        McbspbRegs.SRGR1.bit.FWID = 0;              // Frame Width = 1 CLKG period
+     //    McbspbRegs.SRGR1.bit.CLKGDV = CLKGDV_VAL;
+
+     //  McbspbRegs.SRGR2.all=0x2000; // CLKSM=1, FPER = 1 CLKG periods
+      // McbspbRegs.SRGR1.all= 0x0001; // Frame Width = 1 CLKG period, CLKGDV=16
+
+       // McbspbRegs.SRGR1.bit.CLKGDV= 3;
+
+       McbspbRegs.SPCR2.bit.GRST=1; // Enable the sample rate generator
+
+       delay_loop(); // Wait at least 2 SRG clock cycles
+       McbspbRegs.SPCR2.bit.XRST=1; // Release TX from Reset
+       McbspbRegs.SPCR1.bit.RRST=1; // Release RX from Reset
+       McbspbRegs.SPCR2.bit.FRST=1;
+
+       McbspbRegs.MFFINT.bit.XINT = 1; // Enable Transmit Interrupts
+       McbspbRegs.MFFINT.bit.RINT = 1; // Enable Receive Interrupts
+
+   }
+
+void InitMcbspbGpioOK(void)
+ {
+     EALLOW;
+ /* Configure McBSP-A pins using GPIO regs*/
+ // This specifies which of the possible GPIO pins will be McBSP functional pins.
+ // Comment out other unwanted lines.
+
+     //GpioCtrlRegs.GPAMUX1.bit.GPIO12 = 3;  // GPIO12 is MDXB pin (Comment as needed)
+     GpioCtrlRegs.GPAMUX2.bit.GPIO24 = 3;    // GPIO24 is MDXB pin (Comment as needed)
+     //GpioCtrlRegs.GPAMUX1.bit.GPIO13 = 3;  // GPIO13 is MDRB pin (Comment as needed)
+     GpioCtrlRegs.GPAMUX2.bit.GPIO25 = 3;    // GPIO25 is MDRB pin (Comment as needed)
+     //GpioCtrlRegs.GPAMUX1.bit.GPIO14 = 3;  // GPIO14 is MCLKXB pin (Comment as needed)
+     GpioCtrlRegs.GPAMUX2.bit.GPIO26 = 3;    // GPIO26 is MCLKXB pin (Comment as needed)
+ //  GpioCtrlRegs.GPAMUX1.bit.GPIO3 = 3;     // GPIO3 is MCLKRB pin (Comment as needed)
+     //GpioCtrlRegs.GPBMUX2.bit.GPIO60 = 1;  // GPIO60 is MCLKRB pin (Comment as needed)
+     //GpioCtrlRegs.GPAMUX1.bit.GPIO15 = 3;  // GPIO15 is MFSXB pin (Comment as needed)
+   GpioCtrlRegs.GPAMUX2.bit.GPIO27 = 3;    // GPIO27 is MFSXB pin (Comment as needed)
+ //  GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 3;     // GPIO1 is MFSRB pin (Comment as needed)
+     //GpioCtrlRegs.GPBMUX2.bit.GPIO61 = 1;  // GPIO61 is MFSRB pin (Comment as needed)
+
+ /* Enable internal pull-up for the selected pins */
+ // Pull-ups can be enabled or disabled by the user.
+ // This will enable the pullups for the specified pins.
+ // Comment out other unwanted lines.
+     GpioCtrlRegs.GPAPUD.bit.GPIO24 = 0;     // Enable pull-up on GPIO24 (MDXB) (Comment as needed)
+     //GpioCtrlRegs.GPAPUD.bit.GPIO12 = 0;   // Enable pull-up on GPIO12 (MDXB) (Comment as needed)
+     GpioCtrlRegs.GPAPUD.bit.GPIO25 = 0;     // Enable pull-up on GPIO25 (MDRB) (Comment as needed)
+     //GpioCtrlRegs.GPAPUD.bit.GPIO13 = 0;   // Enable pull-up on GPIO13 (MDRB) (Comment as needed)
+     GpioCtrlRegs.GPAPUD.bit.GPIO26 = 0;     // Enable pull-up on GPIO26 (MCLKXB) (Comment as needed)
+     //GpioCtrlRegs.GPAPUD.bit.GPIO14 = 0;   // Enable pull-up on GPIO14 (MCLKXB) (Comment as needed)
+ //  GpioCtrlRegs.GPAPUD.bit.GPIO3 = 0;      // Enable pull-up on GPIO3 (MCLKRB) (Comment as needed)
+     //GpioCtrlRegs.GPBPUD.bit.GPIO60 = 0;   // Enable pull-up on GPIO60 (MCLKRB) (Comment as needed)
+   GpioCtrlRegs.GPAPUD.bit.GPIO27 = 0;     // Enable pull-up on GPIO27 (MFSXB) (Comment as needed)
+     //GpioCtrlRegs.GPAPUD.bit.GPIO15 = 0;   // Enable pull-up on GPIO15 (MFSXB) (Comment as needed)
+ //  GpioCtrlRegs.GPAPUD.bit.GPIO1 = 0;      // Enable pull-up on GPIO1 (MFSRB) (Comment as needed)
+     //GpioCtrlRegs.GPBPUD.bit.GPIO61 = 0;   // Enable pull-up on GPIO61 (MFSRB) (Comment as needed)
+
+
+ /* Set qualification for selected input pins to asynch only */
+ // This will select asynch (no qualification) for the selected pins.
+ // Comment out other unwanted lines.
+
+   GpioCtrlRegs.GPAQSEL2.bit.GPIO24 = 3;   //?
+
+      GpioCtrlRegs.GPAQSEL2.bit.GPIO25 = 3;   // Asynch input GPIO25 (MDRB) (Comment as needed)
+     //GpioCtrlRegs.GPAQSEL1.bit.GPIO13 = 3; // Asynch input GPIO13 (MDRB) (Comment as needed)
+     GpioCtrlRegs.GPAQSEL2.bit.GPIO26 = 3;   // Asynch input GPIO26(MCLKXB) (Comment as needed)
+     //GpioCtrlRegs.GPAQSEL1.bit.GPIO14 = 3; // Asynch input GPIO14 (MCLKXB) (Comment as needed)
+  //   GpioCtrlRegs.GPAQSEL1.bit.GPIO3 = 3;    // Asynch input GPIO3 (MCLKRB) (Comment as needed)
+     //GpioCtrlRegs.GPBQSEL2.bit.GPIO60 = 3; // Asynch input GPIO60 (MCLKRB) (Comment as needed)
+     GpioCtrlRegs.GPAQSEL2.bit.GPIO27 = 3;   // Asynch input GPIO27 (MFSXB) (Comment as needed)
+     //GpioCtrlRegs.GPAQSEL1.bit.GPIO15 = 3; // Asynch input GPIO15 (MFSXB) (Comment as needed)
+ //  GpioCtrlRegs.GPAQSEL1.bit.GPIO1 = 3;    // Asynch input GPIO1 (MFSRB) (Comment as needed)
+     //GpioCtrlRegs.GPBQSEL2.bit.GPIO61 = 3; // Asynch input GPIO61 (MFSRB) (Comment as needed)
+
+     GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 0;  //
+     GpioCtrlRegs.GPADIR.bit.GPIO16 = 1;   // GPIO27 = output
+     GpioCtrlRegs.GPAPUD.bit.GPIO16 = 0;// Enable pullup
+     //GpioDataRegs.GPASET.bit.GPIO27 = 1;   // Load output latch
+     EDIS;
+
+
+}
+
 //===========================================================================
 // No more.
 //===========================================================================

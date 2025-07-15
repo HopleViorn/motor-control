@@ -3,7 +3,7 @@
 int32_t EncodrIError;
 int32_t EncodrPidIElimit=850;
 int32_t EncodrPidMax=15000;
-uint16_t  P=200;//100; 平时100
+uint16_t  P=400;//400;//100;  原为100，后为适应大楄 差机子改成200也行。现固定200
 
 
 
@@ -54,7 +54,7 @@ float  ZL_PIDPower(int32_t  SetPower,int32_t FactPower)
 		
     Current_Error=SetPower-FactPower;  //大于输出正值，加速  最大值700000   输出12000最大
 		if((Current_Error<30000)&&(Current_Error>-30000))PowerP=0.0001;
-		else PowerP=0.0003;
+		else PowerP=0.0001;
     PowerIError=PowerIError+Current_Error;
     if(PowerIError>PowerIErrorIElimit)PowerIError=PowerIErrorIElimit;
     if(PowerIError<-(int)PowerIErrorIElimit)PowerIError=-(int)PowerIErrorIElimit;

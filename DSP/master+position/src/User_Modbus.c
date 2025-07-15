@@ -1289,7 +1289,8 @@ void CMD06(void)
 					Pn[PnFactNum] = WrDataEdit;
 					Pn[SumAddr] += Pn[PnFactNum];
 					CheckSum += Pn[PnFactNum];
-				  if((WrDataAdd!=304)&&(WrDataAdd!=306))  //modbus写速度不保存，因上位机不断调速怕损坏flash
+				 // if((WrDataAdd!=304)&&(WrDataAdd!=306))  //modbus写速度不保存，因上位机不断调速怕损坏flash
+				  if(WrDataAdd!=304)  //306307需要保存了
 				  {
 					SPI_WriteFRAM(PnFactNum,&Pn[PnFactNum],1);//速度更改不保存
 					SPI_WriteFRAM(SumAddr,&Pn[SumAddr],1);

@@ -3,7 +3,7 @@
 #include "EDBclm.h"			// define and function declare
 #include "globalvar.h"		//
 #include "SPI4.h"
-
+extern int16 CommandSpeed;
 Uint16 A,B,C;
 
 int32 Sum;
@@ -1206,7 +1206,7 @@ void SJDControl(void)
 
 void ParSpd(void)
 {
-	SPEEDINS = (int16)Pn[ParSpdADD];
+	SPEEDINS = CommandSpeed;//(int16)Pn[ParSpdADD];
 	SPEEDINS *= SpeedUnit;
 //___________________________________
 /*	test2++;

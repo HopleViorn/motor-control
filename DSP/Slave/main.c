@@ -268,10 +268,10 @@ void main(void)
    // McbspbRegs.DXR2.all=0xAABB;
        if(!state_flag2.bit.Son)
          {
-           EncodrIError=0;
-                IError=0;
-                syncOut=0;
-                speed3=0;
+           PositionCurrentError=0;
+               // IError=0;
+              //  syncOut=0;
+              //  speed3=0;
              //  Masterspeed=0;
             }
         if(int_flagx.bit.int_time1 && int_flagx.bit.int_time2)

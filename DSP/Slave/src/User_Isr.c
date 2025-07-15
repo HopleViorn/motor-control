@@ -5,7 +5,9 @@
 #include "globalvar.h"
 #include "SPI4.h"
 
-
+Uint16 To90Count;
+Uint16 OverUCount;
+Uint16 OverVCount;
 int16 AsSpeed=9;
 Uint32 MyMaxI=980;//30A
 Uint16 eaEncoder;
@@ -231,14 +233,22 @@ BIT_DISP led_disp0,led_disp1;
 	          //        {
 	            //          if(Iu<Fkkk1)Fkkk1=Iu;
 	            //      }
-		          if((Iu>1146)||(Iu<-1146))   //过流 20A       35A *24*2048/1500=364
-		                    {
-		                        state_flag2.bit.HaveAlm = 1;
-		                        state_flag2.bit.enPWM=0;//关PWM
-		                        Disable_PWM();
-		                        alarmno = 01;
-
-		                    }
+		                     // if((Iu>1146)||(Iu<-1146))   //过流 20A       45A *24*2048/1500=1310
+		                      if((Iu<1310)&&(Iu>(-1310)))
+		                      {
+		                          OverUCount=0;
+		                      }
+		                      else
+		                      {
+		                          if(OverUCount<3) OverUCount++;
+		                          else
+		                          {
+		                              state_flag2.bit.HaveAlm = 1;
+		                              state_flag2.bit.enPWM=0;//关PWM
+		                              Disable_PWM();
+		                              alarmno = 01;
+		                          }
+		                      }
 
 		///////////////////////////////////////////////////////////////////////////////
 
@@ -266,13 +276,21 @@ BIT_DISP led_disp0,led_disp1;
 	                       //  {
 	                        //     if(Iv<Fkkk2)Fkkk2=Iv;
 	                        // }
-	            if((Iv>1146)||(Iv<-1146))   //过流 10A
-	            {
-	                state_flag2.bit.HaveAlm = 1;
-	                state_flag2.bit.enPWM=0;//关PWM
-	                Disable_PWM();
-	                alarmno = 01;
-	            }
+	                            if((Iv<1310)&&(Iv>(-1310)))
+	                              {
+	                                  OverVCount=0;
+	                              }
+	                              else
+	                              {
+	                                  if(OverVCount<3) OverVCount++;
+	                                  else
+	                                  {
+	                                      state_flag2.bit.HaveAlm = 1;
+	                                      state_flag2.bit.enPWM=0;//关PWM
+	                                      Disable_PWM();
+	                                      alarmno = 01;
+	                                  }
+	                              }
 
 
 	    ///////////////////////////////////////////////////////////////////////////////
@@ -1933,25 +1951,26 @@ void runcur_process(void)
 	  	{
 	    	if (AsTeta == 90)
 			{
-	    	    ///////////////////////
-	    	                   //  if(AsTeta=80)
-	    	                   //      {
+	    	    //-----------------------------
+	    	    //if(To90Count<2)To90Count++;
+	    	    //{
+	    	    //    To90Count=0;
+	    	        OrientFlux();                  // �����ջ��ų���λ
+	    	       if(ccount++ > 20000)            // ʸ�����������ʱ2��
+	    	        {
+	    	             ccount = 0;
+	    	             int_flagx.bit.SciFindInitPhase = 1;
+	    	             Tetacnt = (Uint16)encoder; // 现在每次用新的。
+	    	                           ComminitPhase = Tetacnt;    //�õ���λ
+	    	         }
+	    	   // }
 
-	    	                    //         }
-	    	                //////////////////
-		  		OrientFlux();					// �����ջ��ų���λ
-				if(ccount++ > 20000)			// ʸ�����������ʱ2��
-				{
-					ccount = 0;
-					int_flagx.bit.SciFindInitPhase = 1;
-					Tetacnt = (Uint16)encoder; // 现在每次用新的。
-					ComminitPhase = Tetacnt;    //�õ���λ
+	    	    //------------------------------
 
-				}
 			}
 			else
 			{
-			    if(AsTeta==80)AsSpeed=speed;
+			    if(AsTeta==50)AsSpeed=speed;
 		  		Asroate();						// �첽�϶
 			}
 	  	}
@@ -1982,6 +2001,7 @@ void Asroate(void)
 	  AsTeta ++;
 
 	  if (AsTeta >= 360)
+	  //if (AsTeta >= 720)
 	  {
 	    AsTeta = 0;
 		int_flag3.bit.pass360 = 1;
@@ -3005,7 +3025,7 @@ int32 tmpAna1,tmpAna2;//,tmpAna3;
 		Iqrcount = 0;
 	}
 //--------------------------------------
-	McbspbRegs.DXR1.all=(Uint16)Tn;
+//	McbspbRegs.DXR1.all=(Uint16)Tn;
 //	McbspbRegs.DXR1.all=0xBBCC;
 //-----------------------------------------
 	if(Pn[MotorTab])

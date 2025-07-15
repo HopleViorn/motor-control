@@ -524,8 +524,8 @@ void clkg_delay_loop(void)
 
        //McbspbRegs.RCR1.bit.RWDLEN1=2; //32  16-bit word    0 8位 1 12位 2 16位 3 24 4   5 32
        // McbspbRegs.XCR1.bit.XWDLEN1=2; // 16-bit word
-        McbspbRegs.RCR1.bit.RWDLEN1=0; //32  16-bit word    0 8位 1 12位 2 16位 3 24 4   5 32
-        McbspbRegs.XCR1.bit.XWDLEN1=0; // 16-bit word
+        McbspbRegs.RCR1.bit.RWDLEN1=5; //32  16-bit word    0 8位 1 12位 2 16位 3 24 4   5 32
+        McbspbRegs.XCR1.bit.XWDLEN1=5; // 32-bit word
 
         McbspbRegs.RCR1.bit.RFRLEN1=0; //1-word
         McbspbRegs.XCR1.bit.XFRLEN1=0; // 1 word

@@ -1285,12 +1285,12 @@ void CMD06(void)
 					Pn[PnFactNum] = WrDataEdit;
 					Pn[SumAddr] += Pn[PnFactNum];
 					CheckSum += Pn[PnFactNum];
-				 if((WrDataAdd!=304)&&(WrDataAdd!=306))
-				  //   if(WrDataAdd!=304)
-				 {
-					SPI_WriteFRAM(PnFactNum,&Pn[PnFactNum],1);
-					SPI_WriteFRAM(SumAddr,&Pn[SumAddr],1);
-				 }
+				 //if((WrDataAdd!=304)&&(WrDataAdd!=306))
+					if(WrDataAdd!=304)
+					{
+					    SPI_WriteFRAM(PnFactNum,&Pn[PnFactNum],1);
+					    SPI_WriteFRAM(SumAddr,&Pn[SumAddr],1);
+					}
 					sci_flag.bit.HOST_undone = 0;				////数据操作完成
 				}								
 			}

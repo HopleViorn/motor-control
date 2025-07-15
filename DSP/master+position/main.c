@@ -52,7 +52,8 @@ void main(void)
 // Step 2. Initalize GPIO: 8
 ////////////////////////////////////////////////////////////////////////////////////////
 	InitGpio();
-    InitMcbspbGpio();
+   // InitMcbspbGpio();  主
+    InitMcbspbGpioOK(); // 从
 ////////////////////////////////////////////////////////////////////////////////////////
 // Step 3. Clear all interrupts and initialize PIE vector table: Disable CPU interrupts 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -170,7 +171,8 @@ void main(void)
     PieCtrlRegs.PIEIER6.bit.INTx4=1;     // Enable PIE Group 6, INT 6
 
     //-------------------------SPI4 ------------
-    init_mcbspb_spi();  //32bit
+    //init_mcbspb_spi();  //32bit   主
+    SPISLAVEOK();  //32bit
     //---------------------------------------------------------------------------------
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -267,8 +269,6 @@ void main(void)
 
     for (;;)
 	{Uint16 pg_in,cn1_in;
-
-
 
 
 	   if(!state_flag2.bit.Son)
@@ -1085,7 +1085,7 @@ void main(void)
 		{
 			Un[Un_TCMD] =Pz;// TCMD;							    // ��������
 		}
-		Un[Un_Tn] = Tn;										// �ڲ�ת�ظ���
+		Un[Un_Tn] = Tn;
 		Un[Un_Input] = (~cn1_in) & 0x00FF;					// �����
 		Un[Un_PGUVWABC] = EncStatus & 0x00FF;				// PGUVW&PGERR&ABCBR&UVWBR
 		Un[Un_OutST] = (out_state.all & 0x000F) | ((EncStatus>>4) & 0x00F0);				// ��������ź�

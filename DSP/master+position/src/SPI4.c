@@ -3,8 +3,8 @@
 #include "SPI4.h"
 
 #define standSum 12540
-
-
+int16 RXtemp2;
+int16 CommandSpeed;
 
 int16 SlaveIdr=0;
 int16 SlaveIqr=0;
@@ -115,35 +115,22 @@ interrupt void Mcbspb_TxINTB_ISR(void)    //速度发送中断中发送encoder  
 
 interrupt void Mcbspb_RxINTB_ISR(void)
 {
-        //    temp=McbspbRegs.DRR2.all;
-       //     temp=temp<<16;
-                  //   Slavespeed=(int16)(McbspbRegs.DRR1.all);
 
-                   //  speed3=(Slavespeed+Avr100spd)>>1;  //第三轴速度两者之和 。同步时速度为0  ;相加/ 2   主速为正，从速为负 均取的后16位。负值需要转换吗
+         // McbspbRegs.DXR2.all=0x0;
 
+                       CommandSpeed=(int16)McbspbRegs.DRR1.all;  //arm的低位由2接收  DSP的2位低位
+                   //   speed3=(Masterspeed+Avr5spd%;5536)>>1;
+                       RXtemp2=McbspbRegs.DRR2.all;               //DSP 的1接收arm的高位。 2主机不用，由副机用
+                      // RXtemp2=RXtemp2<<8;
+                      //  PositionCurrentError=((int16)RXtemp2)>>8;
 
+                    // if( PositionCurrentError>50)PositionCurrentError=50;
+                    // if( PositionCurrentError<-50)PositionCurrentError=-50;
+                    // if(speed<4000)PositionCurrentError=0;  //400RMPM
+                     //PositionCurrentError=0;
+                    // PositionSpeed=PositionCurrentError;
+                    // if(xyz==0)  PositionCurrentError=0;   //MODBUS 1062
 
-        //    if(temp==0xaaaa)   //encoder
-        //      {
-                //  Slaveencoder=McbspbRegs.DRR1.all;
-                //  McbspbRegs.DXR1.all=encoder;         //发送本机 Slave encodr 位于User_lsr.c enoder得出处
-                  //McbspbRegs.DXR2.all=0xAAAA;                    //高位发送encodr标志
-           //   }
-           //   else      //speed
-          //    {
-
-
-        //      }
-      // if((Slavespeed>130000)|(Slavespeed<-130000))//限130000
-      // {
-               //Slavespeed=speed;  //超限就=self
-             //SlaveDataerror++;
-     //  }
-
-
-   // rdata=McbspbRegs.DRR1.all;
-   // if (rdata != ( (rdata_point) & 0x00FF) ) error();
-   // rdata_point = (rdata_point+1) & 0x00FF;
     // To receive more interrupts from this PIE group, acknowledge this interrupt
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
 }

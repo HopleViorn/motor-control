@@ -17,7 +17,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+void SPISLAVEOK(void);
+void InitMcbspbGpioOK(void);
 
 //---------------------------------------------------------------------------
 // McBSP Individual Register Bit Definitions:

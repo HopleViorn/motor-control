@@ -268,7 +268,13 @@ uint8_t InitAngIfRight(uint8_t MotorNum)
 	}
 	else   //非同步时，进行对比
 	{
-				DltAng=NowInitAng-Pc485RtuReg[5+MotorNum-1];
+				uint16_t Ang1,Ang2; 
+				if(NowInitAng>1024)Ang1=2048-NowInitAng;
+				else Ang1=NowInitAng;
+				if(Pc485RtuReg[5+MotorNum-1]>1024)Ang2=2048-Pc485RtuReg[5+MotorNum-1];
+				else Ang2=Pc485RtuReg[5+MotorNum-1];
+				DltAng=(int16_t) Ang1-(int16_t) Ang2;
+				//DltAng=NowInitAng-Pc485RtuReg[5+MotorNum-1];
 				if(DltAng>600||DltAng<-600)
 				{
 								Pc485RtuReg[12]=200+MotorNum;   //查找的新角度和存储的差异过大
@@ -633,35 +639,44 @@ void SaftyCheck(void)
 					
 												NowCommandSPEED=5000;	
 												HighPowerOverFlag=1;
-												if(!kkk)kkk=Pc485RtuReg[22];
-												if(!ttt)ttt=Pc485RtuReg[23];
 								}
-								else//12000不过载时 跟随用户转带
+							  else
 								{
-											NowCommandSPEED=Pc485RtuReg[2];
+											if(!HighPowerOverFlag)NowCommandSPEED=Pc485RtuReg[2];  //此处需要加急降过程开始的限制。否则必撞。
+											//急降开始后就不能再跟用户调整了
 								}
-						}
+								
+							}
 /////////////////////////上升功率限制///////////////////////////////////
 						if(!HighSpeedOk)//已经降到位，或第一次上升，则上升用Pid.
 						{
-							if(BadSyncto600Count<60)BadSyncto600Count++;  //Pid计算频率2s 执行频率在it中，为60*2。5ms=150ms
+							if(BadSyncto600Count<2)BadSyncto600Count++;  //<4比《60调节更平滑更稳定。  <4效果已经比较 好了。跳动小
 							else
 							{
 									BadSyncto600Count=0;
 									CommandSpeedTemp=ZL_PIDPower(PowerLmt,PowerNow2);//FactPower);
 										//CommandSpeedTemp=PID_WZ(PowerLmt,PowerNow2);//FactPower);
-									NowCommandSPEED=FactSpeed+CommandSpeedTemp;//+NowCommandSPEED;
-		
+									
+									
+					//////////////////////力矩监视 超过100%停在原处转速/////////////////////////////////////////////
+									if(((__fabs(Pc485RtuReg[23])>99)||(__fabs(Pc485RtuReg[22])>99))&&(SyncCount>=R600Time))
+									{
+												if(NowCommandSPEED>600)NowCommandSPEED=FactSpeed-10;//NowCommandSPEED-100;
+									}
+									else 
+									{
+													 NowCommandSPEED=FactSpeed+CommandSpeedTemp;//+NowCommandSPEED;
+									}
+
+
+
+								
 									if(NowCommandSPEED>Pc485RtuReg[2])NowCommandSPEED=Pc485RtuReg[2];
 									else
 									{
 											if(NowCommandSPEED<600)NowCommandSPEED=600;
 									}
-									//////////////////////力矩监视 超过100%停在原处转速/////////////////////////////////////////////
-									if(((__fabs(Pc485RtuReg[23])>99)||(__fabs(Pc485RtuReg[22])>99))&&(SyncCount>=R600Time))
-									{
-												if(NowCommandSPEED>600)NowCommandSPEED=FactSpeed-50;//NowCommandSPEED-100;
-									}
+								
 							}
 						}
 	
@@ -1065,6 +1080,7 @@ void init_PA(void)
 									Safty=0;
 									Saftycount=0;
 	Pc485RtuReg[2]=600;
+	HighPowerOverFlag=0;
 	
 }
 

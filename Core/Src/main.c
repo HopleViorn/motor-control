@@ -180,10 +180,10 @@ TIM_HandleTypeDef htim4;
 #define KW1_ON  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_SET); 
 #define KW1_OFF HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET); 
 //--------泵型号选择参数--------------------
-uint16_t Vp[4]={300,500,100,100};  // Vp=300右边泵才能同步。原来及左边泵用的500.此泵电流环P=4000.工作得好 其他泵6000.
-uint16_t Vi[4]={800,700,100,100};  //其他泵Vi=700
+uint16_t Vp[4]={300,600,100,100};
+uint16_t Vi[4]={1000,700,100,100};
 uint16_t ADDTime[4]={8000,8000,10000,10000};
-uint16_t DecTime[4]={1800,5000,10000,10000};
+uint16_t DecTime[4]={1500,5000,10000,10000};
 uint16_t OverPowerLiJuat12000[4]={57,200,57,57};   //12000降速力矩
 uint16_t CanFastLowLiJu[4]={84,84,84,84};   //5800恢复升速力矩
 //--------电机型号选择参数END--------------------

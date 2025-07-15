@@ -2,6 +2,7 @@
 #include "DSP2833x_Examples.h"   // DSP2833x Examples Include File
 #include "SPI4.h"
 
+int16 CommandSpeed;
 extern int16 encincr;
 //#include "globalvar.h"
 extern Uint16 eaEncoder;
@@ -126,16 +127,16 @@ interrupt void Mcbspb_TxINTB_ISR(void)
 interrupt void Mcbspb_RxINTB_ISR(void)
 {
         Uint16 RXtemp;
-      // McbspbRegs.DXR2.all=0x0;
+    //   McbspbRegs.DXR2.all=0x0;
 
-                  //   Masterspeed=(int16)McbspbRegs.DRR2.all;
+                    CommandSpeed=(int16)McbspbRegs.DRR1.all;  //由arm的高位发送 DSP 1高位接收
                 //   speed3=(Masterspeed+Avr5spd%;5536)>>1;
-                     RXtemp=McbspbRegs.DRR1.all;
-                     RXtemp=RXtemp<<8;
-                     PositionCurrentError=((int16)RXtemp)>>8;
-
-                  if( PositionCurrentError>50)PositionCurrentError=50;
-                  if( PositionCurrentError<-50)PositionCurrentError=-50;
+                //     RXtemp=McbspbRegs.DRR1.all;
+                //     RXtemp=RXtemp<<8;
+                 //    PositionCurrentError=((int16)RXtemp)>>8;
+                     PositionCurrentError=((int16)McbspbRegs.DRR2.all);   //arm的低位发送
+                  if( PositionCurrentError>200)PositionCurrentError=200;
+                  if( PositionCurrentError<-200)PositionCurrentError=-200;
                  // if(speed<4000)PositionCurrentError=0;  //400RMPM
                   //PositionCurrentError=0;
                  // PositionSpeed=PositionCurrentError;

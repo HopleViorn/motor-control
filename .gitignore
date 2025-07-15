@@ -9,8 +9,8 @@ MDK-ARM/
 .launches
 
 # DSP project debug and build directories
-C1C1OK-FOR-bigmoto/master+position/Debug/
-C1C1OK-FOR-bigmoto/Slave/Debug/
+DSP/master+position/Debug/
+DSP/Slave/Debug/
 
 # Other common build/output files
 *.hex
@@ -26,3 +26,4 @@ C1C1OK-FOR-bigmoto/Slave/Debug/
 *.log
 *.tmp
 *~
+
