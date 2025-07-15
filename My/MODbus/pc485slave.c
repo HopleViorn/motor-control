@@ -4,6 +4,7 @@
 #include "24cxx.h"
 #include "function.h"
 #include "tm1650.h"
+uint8_t BengSetup;
 extern uint8_t BigError;
 uint8_t WriteUseTimeTOFlash;
 extern uint8_t HaveError;
@@ -56,6 +57,51 @@ void PC485SlaveProcess06(void)     //01 06 00 00 00 01 xx xx  回答：01 06 0
            eeprom_WriteBytes(iic_WRtemp,Pc485RX2Buff[3]*2,2);
 					 Pc485RtuReg[32]=0;//执行完一次清除密码
        }
+		 }
+   }
+	 else if(Pc485RX2Buff[3]==40) //紧急停机
+	 {
+		
+				HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_RESET);//    LED0=0;
+				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);  //关 电机1
+				HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET);  //关 电机2
+		
+	 }
+	 else if(Pc485RX2Buff[3]==38)//需要密码  设置泵类型
+   {
+		 if(Pc485RtuReg[32]==syspassword)//需要密码
+	   {
+       
+           Pc485RtuReg[38]=Pc485RX2Buff[4]*256+Pc485RX2Buff[5];
+					 memcpy(iic_WRtemp,&Pc485RtuReg[Pc485RX2Buff[3]],2);
+           eeprom_WriteBytes(iic_WRtemp,Pc485RX2Buff[3]*2,2);
+					 Pc485RtuReg[32]=0;//执行完一次清除密码
+       
+		 }
+   }
+	 else if(Pc485RX2Buff[3]==39)//需要密码  设置泵类型备份
+   {
+		 if(Pc485RtuReg[32]==syspassword)//需要密码
+	   {
+       
+           Pc485RtuReg[39]=Pc485RX2Buff[4]*256+Pc485RX2Buff[5];
+					
+					 Pc485RtuReg[32]=0;//执行完一次清除密码
+					if((Pc485RtuReg[38]==Pc485RtuReg[39])&&(Pc485RtuReg[38]!=0))
+					{
+							memcpy(iic_WRtemp,&Pc485RtuReg[Pc485RX2Buff[3]],2);
+							eeprom_WriteBytes(iic_WRtemp,Pc485RX2Buff[3]*2,2);
+							BengSetup=Pc485RtuReg[39];//主程序里执行写入参数
+							WriteBengType(BengSetup);
+							HAL_Delay(1000);
+						//			BengParaCheck(Pc485RtuReg[38]);  写了不检查，需要重启
+							BengSetup=0;  //执行完后恢复
+					}
+					else
+					{
+					}
+						
+       
 		 }
    }
 	 else if(Pc485RX2Buff[3]==4)// && (Pc485RtuReg[32]==syspassword))  // 同步，需要密码
@@ -115,7 +161,8 @@ void PC485SlaveProcess06(void)     //01 06 00 00 00 01 xx xx  回答：01 06 0
 	 
 	 /////////////////////////////////////////保存Flash///////////////////////////////////////////
 	 if((Pc485RX2Buff[3]==0)||(Pc485RX2Buff[3]==1)||(Pc485RX2Buff[3]==7)||(Pc485RX2Buff[3]==8)
-		 ||(Pc485RX2Buff[3]==9)||(Pc485RX2Buff[3]==10)||(Pc485RX2Buff[3]==11)) // (Pc485RX2Buff[3]==2)  指令速度不再存储
+		 ||(Pc485RX2Buff[3]==9)||(Pc485RX2Buff[3]==10)||(Pc485RX2Buff[3]==11) 
+	   ||(Pc485RX2Buff[3]==38)||(Pc485RX2Buff[3]==39)) // (Pc485RX2Buff[3]==2)  指令速度不再存储
 	 {
 		 memcpy(iic_WRtemp,&Pc485RtuReg[Pc485RX2Buff[3]],2);
      eeprom_WriteBytes(iic_WRtemp,Pc485RX2Buff[3]*2,2);

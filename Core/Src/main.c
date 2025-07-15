@@ -65,6 +65,7 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+extern uint8_t BengSetup;
 extern uint8_t BigError;
 extern uint8_t HaveError;
 float  BoardT;
@@ -77,7 +78,7 @@ extern uint32_t UsedTime;
 extern uint8_t WriteUseTimeTOFlash;
 uint8_t HighSpeedOk=0;
 //uint32_t HighSpeedOkCount;
-int32_t PowerNow;
+int32_t PowerNow,PowerNow2;
 uint32_t PowerMaX=700000;
 uint16_t LiJuLimit;
 
@@ -116,7 +117,7 @@ int32_t L,R;
 extern uint16_t AddSpeedCount,DecSpeedCount;
 extern uint16_t LowstSpeed; 
 
-uint16_t SyncWarningVal=10;//40;
+uint16_t SyncWarningVal;//=10;//40;
 uint16_t OffVal;
 uint8_t checkover;
 uint32_t SyncBadCount;
@@ -131,7 +132,7 @@ uint32_t Saftycount;
 uint16_t SyncCount;
 extern uint8_t DoFingInitAngValFlag;
 uint8_t FastSpeedFlag;
-uint16_t NowCommandSPEED; //RPM
+int16_t NowCommandSPEED; //RPM
 uint8_t Safty;
 extern uint8_t  iic_WRtemp[200];
 
@@ -142,7 +143,7 @@ uint8_t Pc485TX2Buff[8];
 extern uint8_t SyncCOMMAND;
 uint16_t Count485;
 int ArmErrorCode;
-uint32_t FactSpeed;//R/pm
+int32_t FactSpeed;//R/pm
 
 extern u8 CODE7_180[17];
 extern uint8_t HaveError;
@@ -178,9 +179,16 @@ TIM_HandleTypeDef htim4;
 
 #define KW1_ON  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_SET); 
 #define KW1_OFF HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET); 
-
-int8_t  SPITxBuffer[2]={-6,0xCC};
-int8_t 	SPIRxBuffer[2]={3,4};
+//--------泵型号选择参数--------------------
+uint16_t Vp[4]={300,500,100,100};  // Vp=300右边泵才能同步。原来及左边泵用的500.此泵电流环P=4000.工作得好 其他泵6000.
+uint16_t Vi[4]={800,700,100,100};  //其他泵Vi=700
+uint16_t ADDTime[4]={8000,8000,10000,10000};
+uint16_t DecTime[4]={1800,5000,10000,10000};
+uint16_t OverPowerLiJuat12000[4]={57,200,57,57};   //12000降速力矩
+uint16_t CanFastLowLiJu[4]={84,84,84,84};   //5800恢复升速力矩
+//--------电机型号选择参数END--------------------
+int16_t  SPITxBuffer[2]={0xaabb,0xCCdd};
+int16_t 	SPIRxBuffer[2]={3,4};
 
 uint8_t Safty2;
 extern uint8_t RunFlag;
@@ -251,7 +259,7 @@ int main(void)
 	
 	
 	
-	MX_IWDG_Init();
+//	MX_IWDG_Init();
 	MX_TIM2_Init();   //TIM2要于看门狗后初始化
 
   MX_TIM4_Init();
@@ -265,7 +273,7 @@ int main(void)
 MX_ADC1_Init();
 
 HAL_Delay(2000);//Wait DSP?
-//	MX_TIM4_Init();
+
 	HAL_TIM_Base_Start(&htim4 );
 	
 HAL_TIM_Base_Start_IT(&htim8 );
@@ -294,12 +302,7 @@ Pc485L;//PB5;
     TM1650_Set(0x68,CODE7_180[0]);
 		
 	bsp_InitI2c();
-//for(uint8_t i=0;i<200;i++)
-//	{
-//		iic_WRtemp[i]=0;
-//	}
-//	
-//eeprom_WriteBytes(iic_WRtemp,0,200);	
+
 	if(AT24C64_Check())
 	{
 					Pc485RtuReg[12]=100;   //
@@ -310,11 +313,7 @@ Pc485L;//PB5;
    		    TM1650_Set(0x68,CODE7_180[0]); // 0
 					while(1);
 	}
-//		iic_WRtemp[0]=0xff;
-//		iic_WRtemp[1]=0xff;
-//		iic_WRtemp[2]=0xff;
-//		iic_WRtemp[3]=0xff;
-//		eeprom_WriteBytes(iic_WRtemp,50,4);
+
 
 		eeprom_ReadBytes(iic_WRtemp,0,200); 
 		memcpy(Pc485RtuReg,iic_WRtemp ,200);
@@ -333,33 +332,27 @@ Pc485L;//PB5;
 	Pc485RtuReg[4]=0;  //角度查找停止
 	Pc485RtuReg[3]=0;  //运行停止
 		
-//	AdjAddTime(0,8000);  //默认加速时间
-//	HAL_Delay(200);
-//	AdjDecTime(0,1500);	//默认减速时间   1200慢点直通大气是可以的  1000停机不行   400泵1200可以，但180烧模块后，此处改为1500
-//	HAL_Delay(200);
 
-//  ADDTimeData=8000;
-//	PreADDTimeData=8000;
 
 		HAL_TIM_Base_Start_IT(&htim2 );
 	
 
-  /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
 
 	Pc485RtuReg[33]=SaveSyncConst;   //同步数据
 	Pc485RtuReg[16]=38;   //驱动器温度
+	//AdjDecTime(0,3000);	//默认减速时间   1200慢点直通大气是可以的  1000停机不行   400泵1200可以，但180烧模块后，此处改为1500
+//			HAL_Delay(300);
  init_PA();
  
  
 // while(1)
-// {
-// SPITxBuffer[0]=8;	
+//	 {                        //DSP发送McbspbRegs.DXR1由arm的Rx[1] 接收。 也就是DSP的1发送接收都是高位  2为低位
+//									SPITxBuffer[0]=0xaabb;   //由DSP McbspbRegs.DRR2.all
+//									SPITxBuffer[1]=0xccdd;	//由DSP McbspbRegs.DRR1.all 接收
 //									HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
-//									HAL_SPI_TransmitReceive_IT(&hspi1,(uint8_t * )&SPITxBuffer,(uint8_t * )&SPIRxBuffer,1); // 传输1个16位
-//	 HAL_Delay(100);
+//									HAL_SPI_TransmitReceive_IT(&hspi1,(uint8_t * )&SPITxBuffer,(uint8_t * )&SPIRxBuffer,2); // 传输2个16位
+//									HAL_Delay(100);
 // }
 
 BengParaCheck(Pc485RtuReg[38]);
@@ -393,7 +386,7 @@ SelfCheck();  //有错误死循环 ,需重启设备
 		//------------------------------------------------------------					
 							
 
-			Pc485RtuReg[24]=(uint16_t)abs(NowError)*0.72;  //角度偏差 0.01度
+//			Pc485RtuReg[24]=(uint16_t)abs(NowError)*0.72;  //角度偏差 0.01度
 			
 		
 						
@@ -427,38 +420,9 @@ SelfCheck();  //有错误死循环 ,需重启设备
   }
 
 
-	#if 0
-					//-----------------------------------安全执行NEW---------------------------
-					if((PreNowCommandSpeed!=NowCommandSPEED)&&(WriteDspDelayCount1>=40)&&(WriteDspDelayCount2>=40)&&(!ReadDSPBusy))   //调整过程：RtuReg[2]改变，然后在it中NowcommandSpeed改变。最后在此执行。
-					{				
-//					//-----------------先看是否加时间------------
-//							if((!adjAddtimeFlag)&&(SlowTimeFlag==1))  //发生过降速且还没加过时间
-//							{
-//								WriteDSPBusy=1;
-//							//	AdjAddTime(0,32000);   //减慢加速时间  Ver2.0不降加速时间
-//							//	AdjAddTime(0,15000);   //减慢加速时间  Ver2.0不降加速时间
-//								adjAddtimeFlag=1; //此处导致不能一直加时间
-//								
-//								WriteDspDelayCount1=0;//中断中只能计数器延时
-//							}
-//							//------------------再执行速度调整（此处可能为加可能为减）----------------
-//				
-						if(WriteDspDelayCount1>=40)
-						{
-								WriteDSPBusy=1;
-								AdjSpeed(0,NowCommandSPEED);				//关机时先在stop子程序里将NowCommandSpeed=600,然后在此处调速
-								WriteDspDelayCount2=0;
-								if(Pc485RtuReg[3]==0)OffAdjFinishedFlag=1;
-								PreNowCommandSpeed=NowCommandSPEED;
-								WriteDSPBusy=0;
-						}
-						
-					}
-		#endif 
-
 /////////////////////开机检测/////////////////////////
 	
-	if((Pc485RtuReg[3]==0x01)&&Pc485RtuReg[4]==0x0) //同步过程中禁止开机//运行检测 Reg[3] 1:运行 0：停止
+	if((Pc485RtuReg[3]==0x01)&&(Pc485RtuReg[4]==0x0)&&(HaveError==0)) //同步过程中禁止开机//运行检测 Reg[3] 1:运行 0：停止
   {
         Pc485RtuReg[4]=0x00; //       开机状态下禁止查找电机角度
          //------------命令开始，则检测启动条件-----------------
@@ -466,46 +430,6 @@ SelfCheck();  //有错误死循环 ,需重启设备
 			  {				
 								SelfCheck();//无错误才往下
 								BeginSystemSyncProcess();
-//							AdjAddTime(0,5000);  //开机时加速时间
-//							HAL_Delay (100);
-//							SyncCOMMAND=0;  //测试模式
-//							TestPidData=0;
-//							RunFlag=1;
-//              HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_SET);//    LED0=1;
-//					    CheckBeforeRun();
-//              HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET);
-//							HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_SET);
-//							
-//							//已经在开始运转了
-//							HAL_Delay(500);
-//							while((FactSpeed<580)&&(count600<30))  //5秒
-//							{
-//									FactSpeed=ReadDsp1Reg(1,0x0806);	
-//									count600++;
-//									HAL_Delay(500);
-//							}
-//							
-//							if(count600>=30)  //超过5秒转速没达到580R
-//							{
-//								Pc485RtuReg[12]=306;//
-//								
-//								TM1650_Set(0x6E,CODE7_180[10]); //A
-//								TM1650_Set(0x6C,CODE7_180[3]); //  3
-//								TM1650_Set(0x6A,CODE7_180[0]);  // 0  
-//								TM1650_Set(0x68,CODE7_180[6]);  //6 
-//								HaveError=1;
-//								StopMoto();
-//								while(HaveError);   //可以在清报警命令后（HaveError=0）继续运行
-//								armReset();
-//							}
-//							HAL_Delay(1000);
-//							AllZdFind();    //中点检测
-//							SyncCOMMAND=1;    //同步开始 
-//							WorkBegin=1;  //进入正常工作倒计时
-//							adjAddtimeFlag=0;
-//							SlowTimeFlag=0;
-//               //开始正常工作 
-//              //运转开始，同步是否开始在外面检测
 				}
 
 		}
@@ -515,13 +439,9 @@ SelfCheck();  //有错误死循环 ,需重启设备
 		
     }
 		///////////////////////未运行时是否运行初始角度查找现改为HisSync(包括同步测量）////////////////////////
-		if((Pc485RtuReg[3]==0)&&(Pc485RtuReg[4]==1) ) //双电机查找角度条件 DoFingInitAngValFlag为HisSYnc正在运行标志
+		if((Pc485RtuReg[3]==0)&&(Pc485RtuReg[4]==1)&&(HaveError==0) ) //双电机查找角度条件 DoFingInitAngValFlag为HisSYnc正在运行标志
 		{
-       // DoFingInitAngValFlag=1; //标志位，表示正在执行查找初始角度
-			//	CheckBeforeRun();
-			//	HisSyncAction();
-      //  DoFingInitAngValFlag=0;
-				SelfCheck();//无错误才往下
+   			SelfCheck();//无错误才往下
 				HisSyncAction();
 				Pc485RtuReg[32]=0;//执行完一次清除密码
 					Pc485RtuReg[4]=0;
@@ -569,7 +489,14 @@ if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1))   //强制逐渐停机
 			Pc485RtuReg[3]=0;
 	}
 }	
-		
+
+if((BengSetup)&&(!Pc485RtuReg[3])&&(!Pc485RtuReg[4]))
+{
+	WriteBengType(BengSetup);
+	BengSetup=0;  //执行完后恢复
+	BengParaCheck(Pc485RtuReg[38]);
+}
+
 		
 #if 0
 		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1))  //启动开关
@@ -813,7 +740,7 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
   hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS =	SPI_NSS_SOFT;//SPI_NSS_HARD_OUTPUT; 

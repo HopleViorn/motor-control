@@ -33,5 +33,5 @@ void init_PA(void);
 void SelfCheck(void);
 void DisError(uint8_t A,uint16_t Code);
 void BengParaCheck(uint8_t BengType );
-
+uint8_t WriteBengType(uint8_t Index);
 #endif

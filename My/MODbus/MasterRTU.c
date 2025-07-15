@@ -4,13 +4,17 @@
 #include "main.h"
 #include "tm1650.h"
 #include "function.h"
+
+
 #define u16 uint16_t
 #define u8 uint8_t
 
+extern uint16_t  SPITxBuffer[2];
+extern uint16_t 	SPIRxBuffer[2];
 		extern uint8_t				WriteDSPBusy;
 		extern uint8_t				ReadDSPBusy;
 
-extern uint32_t FactSpeed;
+extern int32_t FactSpeed;
 extern int16_t Pc485RtuReg[100]; 
 u8 MyPC485addr=0x01;
 u16 ReadAddr;
@@ -162,12 +166,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)  //接
 						DSP485Received=1;
 						if(FunctionCode ==3)
 						{		
-							if(ReadAddr==0x0809)Pc485RtuReg[22]=(Dsp485RX2Buff[3])<<8|Dsp485RX2Buff[4];  //读左电机 Tn
-							else if(ReadAddr==0x0806)
+							if(ReadAddr==0x0809)Pc485RtuReg[23]=(Dsp485RX2Buff[3])<<8|Dsp485RX2Buff[4];  //读右电机 Tn
+							else if(ReadAddr==0x0806)    //读速度基本没有了，由SPI代替了
 							{
-									Pc485RtuReg[17]=(Dsp485RX2Buff[3])<<8|Dsp485RX2Buff[4];
-									if(Pc485RtuReg[17]<0)Pc485RtuReg[17]=0;
-																		FactSpeed=Pc485RtuReg[17];
+//									Pc485RtuReg[17]=(Dsp485RX2Buff[3])<<8|Dsp485RX2Buff[4];
+//									if(Pc485RtuReg[17]<0)Pc485RtuReg[17]=0;
+//																		FactSpeed=Pc485RtuReg[17];
 							} //读Speed
 						}
 					}
@@ -340,26 +344,9 @@ uint8_t CheckFindOver(uint8_t MotoNob)  //发送485命令固定8字节，确定�
 }
 
 
-uint16_t AdjSpeed(uint8_t MotoNb,uint16_t ComSpeed)//发送485命令固定8字节，设置单电机速度 x  06  01 30 xx xx crcl crch
+uint16_t AdjSpeed(uint8_t MotoNb,uint16_t ComSpeed)//现改为发送SPI高位了。
 { 
-
-     Dsp485TX2Buff[0]=MotoNb;  //电机编号
-     Dsp485TX2Buff[1]=0x06;    //功能码
-     Dsp485TX2Buff[2]=0x01;        // 01 30   //3040 速度寄存器
-	 Dsp485TX2Buff[3]=0x30;    //
-
-     Dsp485TX2Buff[4]=(ComSpeed&0xff00)>>8;  //速度高8位
-     Dsp485TX2Buff[5]=ComSpeed&0x00ff;      //速度低8位
-
-     setSendCRC(Dsp485TX2Buff,6 );   //数据长度在buf[5]+前面3个里;          响应为0地址+1功能码+2字节长度+34.。字节内容+CRC
-     Dsp485TX2Buff[6]=CrcL;          //CRC校验低8位
-     Dsp485TX2Buff[7]=CrcH;          //CRC校验高8位
-
-	 DSP485Received=0;               //接收标志位清零
-     C485H;                          //485总线高电平
-    // HAL_UART_Transmit(&huart2,Dsp485TX2Buff,8,20);  //发送8字节数据
-			HAL_UART_Transmit_IT(&huart2,Dsp485TX2Buff,8);//  
-
+						SPITxBuffer[1]=ComSpeed;
 }   
 
 void AdjAddTime(uint8_t MotoNb,uint32_t time)
@@ -405,6 +392,59 @@ void AdjAddTime(uint8_t MotoNb,uint32_t time)
 //		}
 
    
+}
+
+
+
+void ToBengTypeAdjAddTime(uint8_t MotoNb,uint32_t time)
+{
+	
+
+     Dsp485TX2Buff[0]=MotoNb;  //电机编号
+     Dsp485TX2Buff[1]=0x06;    //功能码
+     Dsp485TX2Buff[2]=0x01;        // 01 30   //3040 速度寄存器
+			Dsp485TX2Buff[3]=0x32;    //     加速时间306
+
+     Dsp485TX2Buff[4]=(time&0xff00)>>8;  //速度高8位
+     Dsp485TX2Buff[5]=time&0x00ff;      //速度低8位
+
+     setSendCRC(Dsp485TX2Buff,6 );   //数据长度在buf[5]+前面3个里;          响应为0地址+1功能码+2字节长度+34.。字节内容+CRC
+     Dsp485TX2Buff[6]=CrcL;          //CRC校验低8位
+     Dsp485TX2Buff[7]=CrcH;          //CRC校验高8位
+
+			DSP485Received=0;               //接收标志位清零
+     C485H;                          //485总线高电平
+     HAL_UART_Transmit(&huart2,Dsp485TX2Buff,8,20);  //发送8字节数据
+		//HAL_UART_Transmit_IT(&huart2,Dsp485TX2Buff,8);//,20);  //发送8字节数据
+			C485L;
+  
+}
+
+void ToBengTypeAdjDecTime(uint8_t MotoNb,uint32_t time)
+{
+			 Dsp485TX2Buff[0]=MotoNb;  //电机编号
+       Dsp485TX2Buff[1]=0x06;    //功能码
+       Dsp485TX2Buff[2]=0x01;        // 01 30   //3040 速度寄存器
+			 Dsp485TX2Buff[3]=0x33;    //     加速时间307
+
+       Dsp485TX2Buff[4]=(time&0xff00)>>8;  //速度高8位
+       Dsp485TX2Buff[5]=time&0x00ff;      //速度低8位
+
+       setSendCRC(Dsp485TX2Buff,6 );   //数据长度在buf[5]+前面3个里;          响应为0地址+1功能码+2字节长度+34.。字节内容+CRC
+       Dsp485TX2Buff[6]=CrcL;          //CRC校验低8位
+       Dsp485TX2Buff[7]=CrcH;          //CRC校验高8位
+
+		  	DSP485Received=0;               //接收标志位清零
+       C485H;                          //485总线高电平
+			HAL_UART_Transmit(&huart2,Dsp485TX2Buff,8,20);  //发送8字节数据
+		//HAL_UART_Transmit_IT(&huart2,Dsp485TX2Buff,8);//,20);  //发送8字节数据
+			C485L;
+//     while((!DSP485Received)&(DspRetrunTimeout<100))
+//     {
+//     	DspRetrunTimeout++;
+//			HAL_Delay(2);//等待DSP返回数据
+//     }
+	
 }
 
 void AdjDecTime(uint8_t MotoNb,uint32_t time)
@@ -497,8 +537,26 @@ int16_t ReadSpeed(uint8_t MotoNb) //发送485命令固定8字节，读取单电�
 	 
 }
 
-
-
+ uint8_t ToBengTypeSendDSPCommand(uint8_t MotoNb,uint16_t regaddr,uint16_t FunData)
+{
+	//清除报警  1022  //0904运行时间 
+	 Dsp485TX2Buff[0]=MotoNb;
+     Dsp485TX2Buff[1]=0x06;
+     Dsp485TX2Buff[2]=(regaddr&0xff00)>>8; //寄存器地址高位       //寄存器地址102B 串口对相角度
+	 Dsp485TX2Buff[3]=regaddr&0x00ff;  //寄存器地址低位
+     Dsp485TX2Buff[4]=(FunData&0xff00)>>8; 
+     Dsp485TX2Buff[5]=FunData&0x00ff;
+     setSendCRC((Dsp485TX2Buff),6 );   //数据长度在buf[5]+前面3个里;          响应为0地址+1功能码+2字节长度+34.。字节内容+CRC
+     Dsp485TX2Buff[6]=CrcL;
+     Dsp485TX2Buff[7]=CrcH;
+	 DSP485Received=0;
+     C485H;
+  
+	HAL_UART_Transmit(&huart2,Dsp485TX2Buff,8,20);
+//	HAL_UART_Transmit_IT(&huart2,Dsp485TX2Buff,8);//20);
+	 C485L;
+	
+}
 //--------------------------------------------------------------------------------------------
  uint8_t SendDSPCommand(uint8_t MotoNb,uint16_t regaddr,uint16_t FunData)
 {

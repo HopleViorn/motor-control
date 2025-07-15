@@ -6,9 +6,23 @@
 #include "tm1650.h"
 #include "cmsis_armcc.h"
 #include <stdlib.h>
-uint16_t Vp,Vi,DecTime,ADDTime;
-uint32_t OverPowerLiJuat12000,CanFastLowLiJu;
-uint16_t BadSyncto600Count;
+#include "pid.h"
+
+int16_t ttt,kkk;
+//--------泵型号选择参数--------------------
+extern uint16_t Vp[4];//={500,500,100,100};
+extern uint16_t Vi[4];//={700,700,100,100};
+extern uint16_t ADDTime[4];//={8000,8000,10000,10000};
+extern uint16_t DecTime[4];//={1500,8000,10000,10000};
+extern uint16_t OverPowerLiJuat12000[4];//={57,200,57,57};   //12000降速力矩
+extern uint16_t CanFastLowLiJu[4];//={84,84,84,84};   //5800恢复升速力矩
+//--------电机型号选择参数END--------------------
+extern int32_t  PowerLmt;
+extern float FUTn22;
+extern int32_t FactPower;
+int32_t CommandSpeedTemp;
+uint16_t OkSyncto600Count;
+uint16_t BadSyncto600Count,OverPowerCount,OverPowerCount2,OverPowerCount3;
 extern uint32_t PowerLimit;
 uint8_t OnFist=0;
 extern uint16_t  PreNowCommandSpeed;
@@ -40,7 +54,7 @@ uint32_t PingWenSpeed;
 extern uint32_t UsedTime;
 extern uint8_t WriteUseTimeTOFlash;
 uint8_t NoSaftyCount;
-extern int32_t PowerNow;
+extern int32_t PowerNow,PowerNow2;
 extern uint32_t PowerMaX;
 extern uint16_t LiJuLimit;
 uint8_t HisSyncFlag;
@@ -76,10 +90,10 @@ uint8_t over;
 uint8_t DoFingInitAngValFlag;
 extern uint8_t Safty;
 extern uint16_t Saftycount;
-extern uint32_t FactSpeed;//Rpm
+extern int32_t FactSpeed;//Rpm
 extern uint8_t SyncCOMMAND;
 extern uint8_t RePress;
-extern uint16_t NowCommandSPEED; //RPM
+extern int16_t NowCommandSPEED; //RPM
 extern uint8_t RunFlag;
 extern UART_HandleTypeDef huart2;
 extern int16_t Pc485RtuReg[100];   
@@ -131,7 +145,7 @@ uint8_t CheckBeforeRun(void)
 								HaveError=1;
 								StopMoto();
 								while(HaveError);   //可以在清报警命令后（HaveError=0）继续运行
-								armReset();
+							//	armReset();
 	}
 	
 	
@@ -166,21 +180,21 @@ uint8_t CheckBeforeRun(void)
 	InitAngIfRight(1);
 	InitAngIfRight(2);
 InitAngIfRight(2);
-//---------------------3-检查两电机速度是否一致----------------------
-	SendDSPCommand(0,0x0130,LowstSpeed);   //做中点校正固定500
-	SP1=ReadDsp1Reg(1,0x0130);
-	SP2=ReadDsp1Reg(2,0x0130);
-	if(SP1!=SP2)
-	{
-		Pc485RtuReg[12]=203;
-		 TM1650_Set(0x6E,CODE7_180[10]); //A
-   		 TM1650_Set(0x6C,CODE7_180[2]); //  2
-    	 TM1650_Set(0x6A,CODE7_180[0]);  // 0  
-   		 TM1650_Set(0x68,CODE7_180[3]);  //3 
-		 HaveError=1;
-		 while(HaveError);   //可以在清报警命令后（HaveError=0）继续运行
-		armReset();
-	}
+//---------------------3-检查两电机速度是否一致----------由SPI传送后取消此检查------------
+//	SendDSPCommand(0,0x0130,LowstSpeed);   //做中点校正固定500
+//	SP1=ReadDsp1Reg(1,0x0130);
+//	SP2=ReadDsp1Reg(2,0x0130);
+//	if(SP1!=SP2)
+//	{
+//		Pc485RtuReg[12]=203;
+//		 TM1650_Set(0x6E,CODE7_180[10]); //A
+//   		 TM1650_Set(0x6C,CODE7_180[2]); //  2
+//    	 TM1650_Set(0x6A,CODE7_180[0]);  // 0  
+//   		 TM1650_Set(0x68,CODE7_180[3]);  //3 
+//		 HaveError=1;
+//		 while(HaveError);   //可以在清报警命令后（HaveError=0）继续运行
+//		armReset();
+//	}
 //	CCH2=1000;
 	FactSpeed=0;
 } 
@@ -255,7 +269,7 @@ uint8_t InitAngIfRight(uint8_t MotorNum)
 	else   //非同步时，进行对比
 	{
 				DltAng=NowInitAng-Pc485RtuReg[5+MotorNum-1];
-				if(DltAng>400||DltAng<-400)
+				if(DltAng>600||DltAng<-600)
 				{
 								Pc485RtuReg[12]=200+MotorNum;   //查找的新角度和存储的差异过大
 								TM1650_Set(0x6E,CODE7_180[10]); //A
@@ -280,12 +294,16 @@ void StopMoto(void)
 		{
 			//if(FactSpeed<LowstSpeed+20)
 			//FactSpeed=ReadDsp1Reg(1,0x0806);
-			if(FactSpeed<610)
+			//if(FactSpeed<610)
+		//	kkk=(uint16_t)FactSpeed;
+			if(MyFactSpeed<650)
 			{
 					
 				RunFlag=0;
 				RePress=0;
 				SyncCOMMAND=0; //同步停止
+				if(!ttt)ttt=FactSpeed;
+			//	if(!kkk)kkk=Pc485RtuReg[22];
 				HAL_GPIO_WritePin(GPIOC,GPIO_PIN_13,GPIO_PIN_RESET);//    LED0=0;
 				HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);  //关 电机1
 				HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET);  //关 电机2
@@ -435,12 +453,13 @@ void AllZdFind(void)
 							Pc485RtuReg[22]=0;
 							Pc485RtuReg[23]=0;
 							CheckCount=0;
-							Pc485RtuReg[22]=ReadDsp1Reg(1,0x0809);   //read Tn
+							Pc485RtuReg[22]=ReadDsp1Reg(1,0x0809);   //read Tn  由SPI传送
+							//HAL_Delay(1000);
 							if(Pc485RtuReg[22]>-10)		TestPidData=10; //加压  -10电机2-TN   加正10，Tn1<0.-10Tn2<0
 							else TestPidData=0; //已经小于-10，就不再加压，
 							while(((Pc485RtuReg[22]>-10))&&(CheckCount<30 ))  //还没被拖动 等待时间5秒
 							{ 
-									Pc485RtuReg[22]=ReadDsp1Reg(1,0x0809);   //read Tn
+									Pc485RtuReg[22]=ReadDsp1Reg(1,0x0809);   //read Tn  由SPI传送
 								
 									HAL_Delay(300);  //300ms
 									CheckCount++;
@@ -571,15 +590,86 @@ void AllZdFind(void)
 
 void armReset(void)
 {
-		__HAL_RCC_CLEAR_RESET_FLAGS();
-	  HAL_Delay(10);
-		HAL_NVIC_SystemReset();
+	//	__HAL_RCC_CLEAR_RESET_FLAGS();
+	 // HAL_Delay(10);
+	//	HAL_NVIC_SystemReset();
 		//__set_FAULTMASK(1); 
 	//SCB->AIRCR =(0x5FA<<SCB_AIRCR_VECTKEY_Pos)|SCB_AIRCR_SYSRESETREQ_Msk;
 	
 }
 
-void SaftyCheck(void) 
+
+void SaftyCheck(void)
+{
+		
+	///////////////////上升下降标志产生/////////////////////////		
+  //----------------如果处于顶峰-------------------			
+				if(FactSpeed>11990)
+				{
+						if(MaxPowerCount<1000)MaxPowerCount++;
+						else
+						{
+							//	ADDTimeData=16000;
+								MaxPowerCount=0;
+								Ok6k=0;
+								HighSpeedOk=1;    //开始监控功率
+								OnFist=1;  //第一次开机完成，用于初次升速不监控功率
+						}
+						
+				}
+	//---------------------------------------------
+				if((HighSpeedOk)&&(MyFactSpeed<5200))
+				{
+							HighPowerOverFlag=0;
+							Ok6k=1;
+							HighSpeedOk=0;    //下到6000转不恢复则监控后面所有功率
+				}//到达降速目的,准备新到达12000监控 与开机到6000转不一样
+	/////////////////////////////急降///////////////////////////////////////			
+	//---------------最高转速快速下降-------------------------------------------
+						if(HighSpeedOk)
+						{
+								if((Pc485RtuReg[23]>61)||(Pc485RtuReg[22]>61))//最高功率控制
+								{
+					
+												NowCommandSPEED=5000;	
+												HighPowerOverFlag=1;
+												if(!kkk)kkk=Pc485RtuReg[22];
+												if(!ttt)ttt=Pc485RtuReg[23];
+								}
+								else//12000不过载时 跟随用户转带
+								{
+											NowCommandSPEED=Pc485RtuReg[2];
+								}
+						}
+/////////////////////////上升功率限制///////////////////////////////////
+						if(!HighSpeedOk)//已经降到位，或第一次上升，则上升用Pid.
+						{
+							if(BadSyncto600Count<60)BadSyncto600Count++;  //Pid计算频率2s 执行频率在it中，为60*2。5ms=150ms
+							else
+							{
+									BadSyncto600Count=0;
+									CommandSpeedTemp=ZL_PIDPower(PowerLmt,PowerNow2);//FactPower);
+										//CommandSpeedTemp=PID_WZ(PowerLmt,PowerNow2);//FactPower);
+									NowCommandSPEED=FactSpeed+CommandSpeedTemp;//+NowCommandSPEED;
+		
+									if(NowCommandSPEED>Pc485RtuReg[2])NowCommandSPEED=Pc485RtuReg[2];
+									else
+									{
+											if(NowCommandSPEED<600)NowCommandSPEED=600;
+									}
+									//////////////////////力矩监视 超过100%停在原处转速/////////////////////////////////////////////
+									if(((__fabs(Pc485RtuReg[23])>99)||(__fabs(Pc485RtuReg[22])>99))&&(SyncCount>=R600Time))
+									{
+												if(NowCommandSPEED>600)NowCommandSPEED=FactSpeed-50;//NowCommandSPEED-100;
+									}
+							}
+						}
+	
+						
+						
+}	
+
+void SaftyCheckOLD(void) 
 {
 	#if 0
 	        if(SyncCount>=R600Time)
@@ -655,100 +745,144 @@ void SaftyCheck(void)
 					
 				
 				
-	 // --------------------------功率限速-----------------------------------------------
-			
-			if((HighSpeedOk)&&(FactSpeed<6010))
-				{
-							HighPowerOverFlag=0;
-							Ok6k=1;
-					   HighSpeedOk=0;    //下到6000转不恢复则监控后面所有功率
-				}//到达降速目的,准备新到达12000监控 与开机到6000转不一样
-				if(FactSpeed>11950)
-				{
-						if(MaxPowerCount<1000)MaxPowerCount++;
-						else
-						{
-							//	ADDTimeData=16000;
-								MaxPowerCount=0;
-								Ok6k=0;
-								HighSpeedOk=1;    //开始监控功率
-								OnFist=1;  //第一次开机完成，用于初次升速不监控功率
-						}
-						
-				}
-				//----------------------------------------------------------
-				if(HighSpeedOk)//下降过程 只有下降到6000以下了才为0
-				{
-//					if(__fabs(PowerNow)>630000)  //直接掉到6K  力矩大约47  2.5ms一次 功率监控各个阶段
-//					//if(__fabs(Pc485RtuReg[23])>50)    //3.58对应12000转力矩  冷机基本上43.热好机35 力矩监控12000
+//	 // --------------------------功率限速-----------------------------------------------
+//			
+//			if((HighSpeedOk)&&(FactSpeed<6010))
+//				{
+//							HighPowerOverFlag=0;
+//							Ok6k=1;
+//					   HighSpeedOk=0;    //下到6000转不恢复则监控后面所有功率
+//				}//到达降速目的,准备新到达12000监控 与开机到6000转不一样
+//				if(FactSpeed>11950)
+//				{
+//						if(MaxPowerCount<1000)MaxPowerCount++;
+//						else
+//						{
+//							//	ADDTimeData=16000;
+//								MaxPowerCount=0;
+//								Ok6k=0;
+//								HighSpeedOk=1;    //开始监控功率
+//								OnFist=1;  //第一次开机完成，用于初次升速不监控功率
+//						}
+//						
+//				}
+//				//----------------------------------------------------------
+//				if(HighSpeedOk)//下降过程 只有下降到6000以下了才为0
+//				{
+
+//					if((__fabs(Pc485RtuReg[23])>59)||(__fabs(Pc485RtuReg[22])>59))    //用左电机右电机易过载，只好移动右电机 。故加5
+//					//if(__fabs(Pc485RtuReg[22])>52) //  12K转时，4.6孔左52以上下降 。而4.2，3.58不降
 //					{
-//								NowCommandSPEED=5000;	
+//								NowCommandSPEED=6000;	
+//							//	NowCommandSPEED=5800;	 //6000最大孔容易力矩超100
 //								HighPowerOverFlag=1;
 //								
 //					 }
-					if(__fabs(Pc485RtuReg[23])>59)    //用左电机右电机易过载，只好移动右电机 。故加5
-					//if(__fabs(Pc485RtuReg[22])>52) //  12K转时，4.6孔左52以上下降 。而4.2，3.58不降
-					{
-							//	NowCommandSPEED=6000;	
-								NowCommandSPEED=5800;	 //6000最大孔容易力矩超100
-								HighPowerOverFlag=1;
-								
-					 }
-					 else
-					 {
-								if(!HighPowerOverFlag)NowCommandSPEED=Pc485RtuReg[2];//没过载才让用户调整。否则降到6K后才能调整。 不过载时 防止下降过程来回震荡
-					 }
-				}	
-				else  //上升过程
-				{
-								//------------------力矩和偏差限制---------可能要独立出来，任何时候都需要检测--------------------------------
-							if(((__fabs(Pc485RtuReg[23])>102)||(__fabs(Pc485RtuReg[22])>95)||(ToCheckError>SyncWarningVal)||(ToCheckError<-SyncWarningVal))&&(SyncCount>=R600Time)) //只监控第一次上升 停机，报错
-							//if(((__fabs(Pc485RtuReg[23])>102)||(__fabs(Pc485RtuReg[22])>95))&&(SyncCount>=R600Time)) 	
-							{
-												if(BadSyncto600Count<800)BadSyncto600Count++;
-												else
-												{
-														BadSyncto600Count=0;
-													//	NowCommandSPEED=600;	
-														Pc485RtuReg[12]=501;//
-																										
-												
-													Pc485RtuReg[3]=0;
-													TM1650_Set(0x6E,CODE7_180[10]); //A
-													TM1650_Set(0x6C,CODE7_180[5]); //  
-													TM1650_Set(0x6A,CODE7_180[0]);  //   
-													TM1650_Set(0x68,CODE7_180[1]);  // 
-													HaveError=1;
-													while(HaveError);
-													
-													
-												}
-
-								}
-								else if((OnFist)&&(Ok6k))//表示第二次上升 
-								{
-									if((FactSpeed<6010)&&(__fabs(Pc485RtuReg[23])<84))  //80小了，关了不升。太小    84 10.2的孔能关了马上升 4.6的孔6K转85.《84刚好能升
-										//if((FactSpeed<6010)&&(__fabs(Pc485RtuReg[22])<72))  //6K转时，4.6孔左73
-										{
-													if(HuiFuCount<400)HuiFuCount++;    //1秒连续小于78才能升  第一次除外
-													else
-													{
-															HuiFuCount=0;
-															NowCommandSPEED=Pc485RtuReg[2];			//力矩小于78，可以升速
-													}
-										}
+//					 else
+//					 {
+//								if(!HighPowerOverFlag)NowCommandSPEED=Pc485RtuReg[2];//没过载才让用户调整。否则降到6K后才能调整。 不过载时 防止下降过程来回震荡
+//					 }
+//				}	
+//				else  //上升过程
+//				{
+//						
+//				}	
+				//------------------力矩偏差过大检测---------------------------
+				#if 0
+							//if(((__fabs(Pc485RtuReg[23])>102)||(__fabs(Pc485RtuReg[22])>95)||(ToCheckError>SyncWarningVal)||(ToCheckError<-SyncWarningVal))&&(SyncCount>=R600Time)) //只监控第一次上升 停机，报错
+							//if(((__fabs(Pc485RtuReg[23])>102)||(__fabs(Pc485RtuReg[22])>95)||(ToCheckError>SyncWarningVal)||(ToCheckError<-SyncWarningVal)
+							//					||(__fabs(PowerNow)>684000))&&(SyncCount>=R600Time))	
+						if(((__fabs(Pc485RtuReg[23])>99)||(__fabs(Pc485RtuReg[22])>99)||(ToCheckError>SyncWarningVal)||(ToCheckError<-SyncWarningVal))&&(SyncCount>=R600Time))//力矩过大
+						{
+										if(BadSyncto600Count<400)BadSyncto600Count++;  //连续1秒大于后再调整一次，调速完又开始等下一秒
 										else
 										{
-												if(Pc485RtuReg[2]<6000)NowCommandSPEED=Pc485RtuReg[2];//力矩过大停在6000	
-										 }
-								}
+														BadSyncto600Count=0;
+														NowCommandSPEED=FactSpeed-10;	 
+														//Pc485RtuReg[12]=501;//
+																										
+												
+													//Pc485RtuReg[3]=0;不直接停机
+														TM1650_Set(0x6E,CODE7_180[10]); //A
+														TM1650_Set(0x6C,CODE7_180[5]); //  
+														TM1650_Set(0x6A,CODE7_180[0]);  //   
+														TM1650_Set(0x68,CODE7_180[1]);  // 
+													//	HaveError=1;   
+
+													
+													
+										}
+						}
+						else
+						{
+							//不用恢复。因为第二次进来，会在上面把NowCommandSPEED恢复成REG[2]
+						}
+							
+				
+				//------------------功率控制--------------------------
+//						if(((__fabs(PowerNow)>708000)||(__fabs(PowerNow2)>708000))&&(SyncCount>=R600Time))
+//						{
+//									NowCommandSPEED=5500;	
+//									HighPowerOverFlag=1;
+//						}
+//						if(((__fabs(Pc485RtuReg[23])>59)||(__fabs(Pc485RtuReg[22])>59))&&(HighSpeedOk)) //最高功率控制
+//						{
+//										NowCommandSPEED=5500;	
+//										HighPowerOverFlag=1;
+//						}
+						if(((__fabs(PowerNow)>684000)||(__fabs(PowerNow2)>684000))&&(SyncCount>=R600Time)&&(!HighPowerOverFlag))
+						{
+										
+								//if(OverPowerCount<400)OverPowerCount++;  //连续1秒大于后再调整一次，调速完又开始等下一秒
+								//else
+								//{
+														OverPowerCount3=0;
+														OverPowerCount=0;
+														if(NowCommandSPEED>650)NowCommandSPEED=FactSpeed-1;	
+														
+												
+								//}
+						}
+						else if(((__fabs(PowerNow)>650000)||(__fabs(PowerNow2)>650000))&&(SyncCount>=R600Time)&&(!HighPowerOverFlag))
+						{
+								//if(OverPowerCount2<400)OverPowerCount2++;  //连续1秒大于后再调整一次，调速完又开始等下一秒
+								//else
+								//{
+													OverPowerCount3=0;
+														OverPowerCount2=0;
+														NowCommandSPEED=FactSpeed+1;	
+														if(NowCommandSPEED>Pc485RtuReg[2])NowCommandSPEED=Pc485RtuReg[2];
+												
+								//}
+						}
+						else if((!HighPowerOverFlag)&&(SyncCount>=R600Time))
+						{
+								if(OverPowerCount3<400)OverPowerCount3++;  //连续1秒大于后再调整一次，调速完又开始等下一秒
 								else
 								{
 										NowCommandSPEED=Pc485RtuReg[2];
 								}
+						}
+						else{
+								
+						}
+	/////////////////////////120000快速下降最高权限//////////////////////////					
+				if(HighSpeedOk)//下降过程 只有下降到6000以下了才为0
+				{
 
-				}										
-					
+					if((__fabs(Pc485RtuReg[23])>59)||(__fabs(Pc485RtuReg[22])>59))    //功率相当于70800
+					//if(__fabs(Pc485RtuReg[22])>52) //  12K转时，4.6孔左52以上下降 。而4.2，3.58不降
+					{
+								NowCommandSPEED=5500;	
+							//	NowCommandSPEED=5800;	 //6000最大孔容易力矩超100
+								HighPowerOverFlag=1;
+								
+					 }
+				 }
+				
+				 if(FactSpeed<5500)HighPowerOverFlag=0;//降到位后再恢复过载标志
+											
+				#endif	
 				
 }			
 				
@@ -812,7 +946,7 @@ void BeginSystemSyncProcess(void)
 								HaveError=1;
 								StopMoto();
 								while(HaveError);   //可以在清报警命令后（HaveError=0）继续运行
-								armReset();
+							//	armReset();
 							}
 							////////////////起动600R成功
 							Pc485RtuReg[12]=0;//
@@ -822,7 +956,7 @@ void BeginSystemSyncProcess(void)
 								TM1650_Set(0x6A,CODE7_180[1]);  //   
 								TM1650_Set(0x68,CODE7_180[1]);  // 
 							///////////////////////////////////
-							HAL_Delay(1000);
+							//HAL_Delay(1000);
 							AllZdFind();    //中点检测
 							
 							adjAddtimeFlag=0;
@@ -976,41 +1110,41 @@ void init_PA(void)
 
 uint8_t WriteBengType(uint8_t Index)
 {
-	
-	
-			switch (Index)
-			{
-				case 1:
-				{
-						Vp=500;
-						Vi=700;
-						DecTime=1500;
-						ADDTime=8000;
-						OverPowerLiJuat12000=57;
-						CanFastLowLiJu=84;
-					
-				}break;
-				case 2:
-				{
-				}break;
-				case 3:
-				{
-				}break;
-				case 4:
-				{
-				}break;
-				default:
-				{
-				}
-			}
-			AdjAddTime(0,ADDTime);  //默认加速时间
-			HAL_Delay(200);
-			AdjDecTime(0,DecTime);	//默认减速时间   1200慢点直通大气是可以的  1000停机不行   400泵1200可以，但180烧模块后，此处改为1500
-			HAL_Delay(200);
-			SendDSPCommand(0,102,Vp);
-			HAL_Delay(200);
-			SendDSPCommand(0,103,Vi);
-			HAL_Delay(200);
+//	
+//	
+//			switch (Index)
+//			{
+//				case 1:
+//				{
+//						Vp=500;
+//						Vi=700;
+//						DecTime=3000;
+//						ADDTime=8000;
+//						OverPowerLiJuat12000=57;
+//						CanFastLowLiJu=84;
+//					
+//				}break;
+//				case 2:
+//				{
+//				}break;
+//				case 3:
+//				{
+//				}break;
+//				case 4:
+//				{
+//				}break;
+//				default:
+//				{
+//				}
+//			}
+			ToBengTypeAdjAddTime(0,ADDTime[Index-1]);  //默认加速时间 非中断方式
+			HAL_Delay(300);
+			ToBengTypeAdjDecTime(0,DecTime[Index-1]);	//默认减速时间   1200慢点直通大气是可以的  1000停机不行   400泵1200可以，但180烧模块后，此处改为1500
+			HAL_Delay(300);
+			ToBengTypeSendDSPCommand(0,102,Vp[Index-1]);
+			HAL_Delay(300);
+			ToBengTypeSendDSPCommand(0,103,Vi[Index-1]);
+			HAL_Delay(300);
 		
 			
 }
@@ -1028,39 +1162,40 @@ void BengParaCheck(uint8_t BengType )
 {
 			if((Pc485RtuReg[38]==Pc485RtuReg[39])&&(Pc485RtuReg[38]<5)&&(Pc485RtuReg[38]>0))//泵型匹配
 			{
-				switch(BengType)
-				{
-					case 1:
-					{
-						Vp=500;
-						Vi=700;
-						DecTime=1500;
-						ADDTime=8000;
-						OverPowerLiJuat12000=57;
-						CanFastLowLiJu=84;
+//				switch(BengType)
+//				{
+//					case 1:
+//					{
+//						Vp=500;
+//						Vi=700;
+//						DecTime=3000;
+//						ADDTime=8000;
+//						OverPowerLiJuat12000=57;
+//						CanFastLowLiJu=84;
+//					
+//						}break;
+//						case 2:
+//						{
+//						}break;
+//						case 3:
+//						{
+//						}break;
+//						case 4:
+//						{
+//						}break;
+//						default:
+//						{
+//						}
+//					}
+					if((ReadDsp1Reg(1,306)!=ReadDsp1Reg(2,306))||(ReadDsp1Reg(1,307)!=ReadDsp1Reg(2,307))){DisError(10,560);HaveError=1;}
+					if((ReadDsp1Reg(1,306)!=ADDTime[BengType-1])||(ReadDsp1Reg(1,307)!=DecTime[BengType-1])){DisError(10,561);HaveError=1;}
 					
-						}break;
-						case 2:
-						{
-						}break;
-						case 3:
-						{
-						}break;
-						case 4:
-						{
-						}break;
-						default:
-						{
-						}
-					}
-					if((ReadDsp1Reg(1,306)!=ReadDsp1Reg(2,306))||(ReadDsp1Reg(1,307)!=ReadDsp1Reg(2,307)))DisError(10,560);
-					if((ReadDsp1Reg(1,306)!=ADDTime)||(ReadDsp1Reg(1,307)!=DecTime))DisError(10,560);
-					
-					if((ReadDsp1Reg(1,102)!=ReadDsp1Reg(2,102))||(ReadDsp1Reg(1,103)!=ReadDsp1Reg(2,103)))DisError(10,561);
-					if((ReadDsp1Reg(1,102)!=Vp)||(ReadDsp1Reg(1,103)!=Vi))DisError(10,561);
+					if((ReadDsp1Reg(1,102)!=ReadDsp1Reg(2,102))||(ReadDsp1Reg(1,103)!=ReadDsp1Reg(2,103))){DisError(10,562);HaveError=1;}
+					if((ReadDsp1Reg(1,102)!=Vp[BengType-1])||(ReadDsp1Reg(1,103)!=Vi[BengType-1])){DisError(10,563);HaveError=1;}
 			 }
 			else  //泵型不匹配
 			{
-				DisError(10,550);
+				HaveError=1;
+				DisError(10,554);
 			}
 }

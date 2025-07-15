@@ -27,6 +27,8 @@ uint8_t SendDSPCommand(uint8_t MotoNb,uint16_t regaddr,uint16_t FunData);
 
 void AdjAddTime(uint8_t MotoNb,uint32_t time);
 void AdjDecTime(uint8_t MotoNb,uint32_t time);
-
+void ToBengTypeAdjAddTime(uint8_t MotoNb,uint32_t time);
+void ToBengTypeAdjDecTime(uint8_t MotoNb,uint32_t time);
+ uint8_t ToBengTypeSendDSPCommand(uint8_t MotoNb,uint16_t regaddr,uint16_t FunData);
 
 #endif
