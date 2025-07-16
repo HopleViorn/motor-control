@@ -4,7 +4,7 @@ int32_t EncodrIError;
 int32_t EncodrPidIElimit=500000;
 int32_t EncodrPidMax=15000;
 uint16_t  SyncP=400;//400;//100;  ԭΪ100����Ϊ��Ӧ��� ����Ӹĳ�200Ҳ�С��̶ֹ�200
-int32_t SyncI=0;
+int32_t SyncI=1;
 
 int32_t PIDencodr(int16_t  error)
 {
@@ -121,5 +121,10 @@ float PID_WZ(int32_t  SetPower,int32_t FactPower)
 }
 
 
-
-
+void PID_Integrator_Reset(void)
+{
+    EncodrIError = 0;
+    PowerIError = 0;
+    TorqueIError = 0;
+    WZ_PowerIError = 0;
+}

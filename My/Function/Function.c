@@ -1001,7 +1001,7 @@ void BeginSystemSyncProcess(void)
 							WorkBegin=1;  //进入正常工作倒计时
                //开始正常工作 
               //运转开始，同步是否开始在外面检测
-						
+	PID_Integrator_Reset();
 }
 
 

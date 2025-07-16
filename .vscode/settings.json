@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "function.h": "c"
-    }
+		"function.h": "c",
+		"main.h": "c"
+	}
 }

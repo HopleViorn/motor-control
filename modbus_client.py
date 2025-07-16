@@ -56,6 +56,43 @@ def connect_modbus_client():
         print(f"连接Modbus客户端时发生未知错误: {e}")
         return None
 
+def get_available_ports():
+    """获取可用串口列表"""
+    ports = serial.tools.list_ports.comports()
+    port_list = []
+    for p in ports:
+        port_info = {
+            'device': p.device,
+            'description': p.description,
+            'hwid': p.hwid
+        }
+        port_list.append(port_info)
+    return port_list
+
+def connect_modbus_client_by_port(port_name):
+    """连接指定串口的Modbus RTU客户端"""
+    try:
+        client = ModbusSerialClient(
+            port=port_name,
+            baudrate=BAUDRATE,
+            bytesize=8,
+            parity='N',
+            stopbits=1,
+            timeout=TIMEOUT
+        )
+        if client.connect():
+            print(f"成功连接到串口 {port_name}，波特率 {BAUDRATE}")
+            return client
+        else:
+            print(f"无法连接到串口 {port_name}。请检查串口是否被占用或配置是否正确。")
+            return None
+    except serial.SerialException as e:
+        print(f"串口错误: {e}")
+        return None
+    except Exception as e:
+        print(f"连接Modbus客户端时发生未知错误: {e}")
+        return None
+
 def send_power_on_command(client):
     """发送开机指令: 01 06 00 03 00 01 B8 0A (写单个寄存器，地址0x0003，值0x0001)"""
     if not client or not client.connected:
@@ -84,6 +121,69 @@ def send_power_on_command(client):
         return False
     except Exception as e:
         print(f"发送开机指令时发生未知错误: {e}")
+        return False
+
+def send_power_off_command(client):
+    """发送关机指令: 01 06 00 03 00 00 79 CA (写单个寄存器，地址0x0003，值0x0000)"""
+    if not client or not client.connected:
+        print("Modbus客户端未连接。")
+        return False
+    
+    register_address = 0x0003  # 寄存器地址
+    value_to_write = 0x0000    # 写入的值
+    
+    print(f"正在发送关机指令: 写寄存器地址 {register_address}，值 {value_to_write}")
+    try:
+        response = client.write_register(address=register_address, value=value_to_write, slave=SLAVE_ADDRESS)
+        
+        if isinstance(response, ModbusException):
+            print(f"发送关机指令失败: Modbus异常 - {response}")
+            return False
+        elif response is None:
+            print("发送关机指令失败: 未收到响应。")
+            return False
+        else:
+            print("关机指令发送成功。")
+            return True
+    except ModbusException as e:
+        print(f"发送关机指令时发生Modbus协议错误: {e}")
+        return False
+    except Exception as e:
+        print(f"发送关机指令时发生未知错误: {e}")
+        return False
+
+def send_speed_command(client, speed_rpm):
+    """发送调速指令: 01 06 00 02 XXXX YYYY (写单个寄存器，地址0x0002，值为转速)"""
+    if not client or not client.connected:
+        print("Modbus客户端未连接。")
+        return False
+    
+    register_address = 0x0002  # 寄存器地址
+    
+    # 限制速度范围（根据实际需要调整）
+    if speed_rpm < 0:
+        speed_rpm = 0
+    elif speed_rpm > 30000:
+        speed_rpm = 30000
+    
+    print(f"正在发送调速指令: 写寄存器地址 {register_address}，速度 {speed_rpm} RPM")
+    try:
+        response = client.write_register(address=register_address, value=speed_rpm, slave=SLAVE_ADDRESS)
+        
+        if isinstance(response, ModbusException):
+            print(f"发送调速指令失败: Modbus异常 - {response}")
+            return False
+        elif response is None:
+            print("发送调速指令失败: 未收到响应。")
+            return False
+        else:
+            print(f"调速指令发送成功，设置速度: {speed_rpm} RPM")
+            return True
+    except ModbusException as e:
+        print(f"发送调速指令时发生Modbus协议错误: {e}")
+        return False
+    except Exception as e:
+        print(f"发送调速指令时发生未知错误: {e}")
         return False
 
 def read_registers(client, start_address, count):

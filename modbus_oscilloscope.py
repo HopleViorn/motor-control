@@ -205,8 +205,47 @@ class ModbusOscilloscope:
 
 def main():
     """主函数"""
-    oscilloscope = ModbusOscilloscope()
-    oscilloscope.start()
+    print("Modbus 示波器")
+    print("=============")
+    print("请选择示波器版本:")
+    print("1. Matplotlib 版本 (传统界面)")
+    print("2. Web 版本 (高性能，现代界面)")
+    print()
+    
+    while True:
+        try:
+            choice = input("请输入选择 (1 或 2): ").strip()
+            if choice == '1':
+                print("正在启动 Matplotlib 版本...")
+                oscilloscope = ModbusOscilloscope()
+                oscilloscope.start()
+                break
+            elif choice == '2':
+                print("正在启动 Web 版本...")
+                try:
+                    from modbus_web_oscilloscope import ModbusWebOscilloscope
+                    web_oscilloscope = ModbusWebOscilloscope()
+                    web_oscilloscope.run()
+                except ImportError as e:
+                    print("错误: 无法导入Web版本依赖库")
+                    print("请安装以下依赖:")
+                    print("pip install dash plotly")
+                    print(f"详细错误: {e}")
+                    print("将使用 Matplotlib 版本...")
+                    oscilloscope = ModbusOscilloscope()
+                    oscilloscope.start()
+                break
+            else:
+                print("无效选择，请输入 1 或 2")
+        except KeyboardInterrupt:
+            print("\n程序已退出")
+            break
+        except Exception as e:
+            print(f"发生错误: {e}")
+            print("将使用默认的 Matplotlib 版本...")
+            oscilloscope = ModbusOscilloscope()
+            oscilloscope.start()
+            break
 
 if __name__ == "__main__":
     main()
