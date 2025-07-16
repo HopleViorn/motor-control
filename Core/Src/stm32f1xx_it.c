@@ -635,9 +635,13 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 								//if((NowError>200)|(NowError<-200))NowError=0;  //相当于滤波  正负200会出现 从12000到0时右机-01
 								if((NowError>500)|(NowError<-500))NowError=0;  //相当于滤波
 							}
-							ToCheckError=		NowError;
+							ToCheckError = NowError;
 
 							Pc485RtuReg[50] = ToCheckError;
+							Pc485RtuReg[51] = FactSpeed;
+							Pc485RtuReg[52] = Pc485RtuReg[22]; //Tn
+							Pc485RtuReg[53] = Pc485RtuReg[22]* FactSpeed; //Tn*Speed
+
 
 							 //----------------PID----------------
 

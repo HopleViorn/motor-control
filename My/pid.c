@@ -1,17 +1,14 @@
 #include "main.h"
 #include "pid.h"
 int32_t EncodrIError;
-int32_t EncodrPidIElimit=850;
+int32_t EncodrPidIElimit=500000;
 int32_t EncodrPidMax=15000;
-uint16_t  P=400;//400;//100;  ԭΪ100����Ϊ��Ӧ��� ����Ӹĳ�200Ҳ�С��̶ֹ�200
-
-
-
+uint16_t  SyncP=400;//400;//100;  ԭΪ100����Ϊ��Ӧ��� ����Ӹĳ�200Ҳ�С��̶ֹ�200
+int32_t SyncI=0;
 
 int32_t PIDencodr(int16_t  error)
 {
     
-    int32_t  i=0;
     int32_t Current_Error;
     int32_t out;
     Current_Error=error;
@@ -20,8 +17,8 @@ int32_t PIDencodr(int16_t  error)
     EncodrIError=EncodrIError+Current_Error;
     if(EncodrIError>EncodrPidIElimit)EncodrIError=EncodrPidIElimit;
     if(EncodrIError<-EncodrPidIElimit)EncodrIError=-EncodrPidIElimit;
-    out= P* Current_Error      //����P
-          + i * EncodrIError;//����I
+    out= SyncP* Current_Error      //����P
+          + SyncI * EncodrIError;//����I
 
 	//out=out/800;   //��Ʒ4000ת�� 800
 	//out=out/500;   //��Ʒ 500= 5000ת�ɹ�

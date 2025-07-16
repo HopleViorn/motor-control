@@ -98,7 +98,7 @@ def read_registers(client, start_address, count):
         print("Modbus客户端未连接。")
         return None
     
-    print(f"正在读取寄存器，起始地址: {start_address}, 数量: {count}")
+    # print(f"正在读取寄存器，起始地址: {start_address}, 数量: {count}")
     try:
         # ModbusSerialClient的read_holding_registers方法会自动计算CRC
         response = client.read_holding_registers(address=start_address, count=count, slave=SLAVE_ADDRESS)
@@ -110,7 +110,7 @@ def read_registers(client, start_address, count):
             print("读取寄存器失败: 未收到响应。")
             return None
         else:
-            print(f"读取成功。寄存器值: {response.registers}")
+            # print(f"读取成功。寄存器值: {response.registers}")
             return response.registers
     except ModbusException as e:
         print(f"读取寄存器时发生Modbus协议错误: {e}")
@@ -137,9 +137,9 @@ def main():
             try:
                 while True:
                     registers = read_registers(client, start_address, count)
-                    if registers is not None:
+                    # if registers is not None:
                         # 动态展示，可以根据需要格式化输出
-                        print(f"当前时间: {time.strftime('%Y-%m-%d %H:%M:%S')}, 寄存器值: {registers}")
+                        # print(f"当前时间: {time.strftime('%Y-%m-%d %H:%M:%S')}, 寄存器值: {registers}")
                     time.sleep(0.01) # 可以调整读取频率
             except KeyboardInterrupt:
                 print("\n用户中断，退出程序。")
