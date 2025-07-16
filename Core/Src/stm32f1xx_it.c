@@ -604,6 +604,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 						if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6)&HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7))
 						{
 							FactError=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_1);//11ʱ�ɼ�10����
+							Pc485RtuReg[50] = FactError;
 							if(Fhao==1)
 							{
 									//syncConst=FactError/2;   
@@ -635,6 +636,9 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 								if((NowError>500)|(NowError<-500))NowError=0;  //相当于滤波
 							}
 							ToCheckError=		NowError;
+
+							Pc485RtuReg[50] = ToCheckError;
+
 							 //----------------PID----------------
 
 									PIDout = PIDencodr(ToCheckError);
