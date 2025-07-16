@@ -7,7 +7,6 @@
 #include "DSP2833x_Device.h"     // DSP2833x Headerfile Include File
 #include "DSP2833x_Examples.h"
 
-
 int32 Pd,Pq,Pz;
 int32 Spq,Spd,Pcount;
 extern int32 IError;
@@ -1086,6 +1085,8 @@ void main(void)
 			Un[Un_TCMD] =Pz;// TCMD;							    // ��������
 		}
 		Un[Un_Tn] = Tn;
+		Un[2] = Iqr;
+
 		Un[Un_Input] = (~cn1_in) & 0x00FF;					// �����
 		Un[Un_PGUVWABC] = EncStatus & 0x00FF;				// PGUVW&PGERR&ABCBR&UVWBR
 		Un[Un_OutST] = (out_state.all & 0x000F) | ((EncStatus>>4) & 0x00F0);				// ��������ź�

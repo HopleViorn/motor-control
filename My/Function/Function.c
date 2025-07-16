@@ -102,6 +102,13 @@ extern uint8_t Dsp485TX2Buff[8];
 extern uint8_t CODE7_180[17];
 uint8_t HaveError=0;
 uint8_t outtemp;
+
+int32_t pid_torque;
+int32_t torque_limit = 80;
+
+#define _min_(a,b) ((a)<(b)?(a):(b))
+#define _max_(a,b) ((a)>(b)?(a):(b))
+
 #define DspSpeedAdd 0x0130
 #define DspNowInitAngAdd 0x0902
 #define DspPoweOnInitAngAdd 0x0907
@@ -654,29 +661,42 @@ void SaftyCheck(void)
 							else
 							{
 									BadSyncto600Count=0;
+									
 									CommandSpeedTemp=ZL_PIDPower(PowerLmt,PowerNow2);//FactPower);
 										//CommandSpeedTemp=PID_WZ(PowerLmt,PowerNow2);//FactPower);
 									
 									
 					//////////////////////力矩监视 超过100%停在原处转速/////////////////////////////////////////////
-									if(((__fabs(Pc485RtuReg[23])>99)||(__fabs(Pc485RtuReg[22])>99))&&(SyncCount>=R600Time))
-									{
-												if(NowCommandSPEED>600)NowCommandSPEED=FactSpeed-10;//NowCommandSPEED-100;
-									}
-									else 
-									{
-													 NowCommandSPEED=FactSpeed+CommandSpeedTemp;//+NowCommandSPEED;
-									}
+									// torque_limit = 30;
+									// if(((__fabs(Pc485RtuReg[23])>torque_limit)||(__fabs(Pc485RtuReg[22])>torque_limit))&&(SyncCount>=R600Time))
+									// {
+												// 使用PID控制力矩限制目标速度
+									// pid_torque = ZL_PIDTorque(torque_limit, (__fabs(Pc485RtuReg[23])>torque_limit) ? Pc485RtuReg[23] : Pc485RtuReg[22]);
+									pid_torque = ZL_PIDTorque(torque_limit, _max_(Pc485RtuReg[22], Pc485RtuReg[23]));
+
+									// if(((__fabs(Pc485RtuReg[23])>torque_limit)||(__fabs(Pc485RtuReg[22])>torque_limit))&&(SyncCount>=R600Time))
+									// {
+									// 	pid_torque = -10;
+									// }else{
+									// 	pid_torque = NowCommandSPEED - FactSpeed;
+									// }
+
+									NowCommandSPEED= Pc485RtuReg[2];
+									// if(Pc485RtuReg[2] + CommandSpeedTemp < NowCommandSPEED)
+									// {
+									// 	NowCommandSPEED=Pc485RtuReg[2] + CommandSpeedTemp;
+									// }
+									// if(FactSpeed + pid_torque < NowCommandSPEED)
+									// {
+									// 	NowCommandSPEED = FactSpeed + pid_torque;
+									// }
+
+									NowCommandSPEED = _min_(NowCommandSPEED, Pc485RtuReg[2] + CommandSpeedTemp);
+
+									NowCommandSPEED = _min_(NowCommandSPEED, FactSpeed + pid_torque);
 
 
-
-								
-									if(NowCommandSPEED>Pc485RtuReg[2])NowCommandSPEED=Pc485RtuReg[2];
-									else
-									{
-											if(NowCommandSPEED<600)NowCommandSPEED=600;
-									}
-								
+									if(NowCommandSPEED<600)NowCommandSPEED=600;
 							}
 						}
 	

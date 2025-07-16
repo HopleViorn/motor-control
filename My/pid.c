@@ -3,7 +3,7 @@
 int32_t EncodrIError;
 int32_t EncodrPidIElimit=850;
 int32_t EncodrPidMax=15000;
-uint16_t  P=400;//400;//100;  Ô­Îª100£¬ºóÎªÊÊÓ¦´ó—è ²î»ú×Ó¸Ä³É200Ò²ÐÐ¡£ÏÖ¹Ì¶¨200
+uint16_t  P=400;//400;//100;  Ô­Îª100ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ó¸Ä³ï¿½200Ò²ï¿½Ð¡ï¿½ï¿½Ö¹Ì¶ï¿½200
 
 
 
@@ -20,17 +20,17 @@ int32_t PIDencodr(int16_t  error)
     EncodrIError=EncodrIError+Current_Error;
     if(EncodrIError>EncodrPidIElimit)EncodrIError=EncodrPidIElimit;
     if(EncodrIError<-EncodrPidIElimit)EncodrIError=-EncodrPidIElimit;
-    out= P* Current_Error      //±ÈÀýP
-          + i * EncodrIError;//»ý·ÖI
+    out= P* Current_Error      //ï¿½ï¿½ï¿½ï¿½P
+          + i * EncodrIError;//ï¿½ï¿½ï¿½ï¿½I
 
-	//out=out/800;   //³ÉÆ·4000×ª£¬ 800
-	//out=out/500;   //³ÉÆ· 500= 5000×ª³É¹¦
+	//out=out/800;   //ï¿½ï¿½Æ·4000×ªï¿½ï¿½ 800
+	//out=out/500;   //ï¿½ï¿½Æ· 500= 5000×ªï¿½É¹ï¿½
 	
-	//out=out/200;   //³ÉÆ·200 = 90000×ª³É¹¦
-	//out=out/100;   //³ÉÆ· 100= 9200×ª³É¹¦
-	out=out/400;   //³ÉÆ· = 9500?×ª³É¹¦
-    if(out >EncodrPidMax)out =EncodrPidMax;
-    if(out <-EncodrPidMax)out =-EncodrPidMax;
+	//out=out/200;   //ï¿½ï¿½Æ·200 = 90000×ªï¿½É¹ï¿½
+	//out=out/100;   //ï¿½ï¿½Æ· 100= 9200×ªï¿½É¹ï¿½
+	out=out/400;   //ï¿½ï¿½Æ· = 9500?×ªï¿½É¹ï¿½
+    if(out >EncodrPidMax) out =EncodrPidMax;
+    if(out <-EncodrPidMax) out =-EncodrPidMax;
 
     
     return out;      ///3;
@@ -48,24 +48,49 @@ float  ZL_PIDPower(int32_t  SetPower,int32_t FactPower)
     
     int32_t Current_Error;
     float out;
-		
-	
-		
-		
-    Current_Error=SetPower-FactPower;  //´óÓÚÊä³öÕýÖµ£¬¼ÓËÙ  ×î´óÖµ700000   Êä³ö12000×î´ó
+    Current_Error=SetPower-FactPower;  //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  ï¿½ï¿½ï¿½Öµ700000   ï¿½ï¿½ï¿½12000ï¿½ï¿½ï¿½
 		if((Current_Error<30000)&&(Current_Error>-30000))PowerP=0.0001;
 		else PowerP=0.0001;
     PowerIError=PowerIError+Current_Error;
     if(PowerIError>PowerIErrorIElimit)PowerIError=PowerIErrorIElimit;
     if(PowerIError<-(int)PowerIErrorIElimit)PowerIError=-(int)PowerIErrorIElimit;
-    out= PowerP* Current_Error      //±ÈÀýP
-          + PowerI * PowerIError;//»ý·ÖI 
+    out= PowerP* Current_Error      //ï¿½ï¿½ï¿½ï¿½P
+          + PowerI * PowerIError;//ï¿½ï¿½ï¿½ï¿½I 
 		out=out;
-		if(out>12000)out=12000;
+		if(out>12000)out=12000*0;
 		else if(out<-11400)out=-11400;
 	
-    return out;    
+    return out;
 
+}
+
+int32_t TorqueIError; 
+int32_t TorqueIErrorIElimit = 6000; 
+float TorqueP = 0.5;
+float TorqueI = 0;
+float TorqueD = 0; // å¾®åˆ†é¡¹ç³»æ•°
+int32_t TorqueLast_Error = 0; // ä¸Šä¸€æ¬¡çš„è¯¯å·®
+
+float ZL_PIDTorque(int32_t SetTorquePercent, int32_t FactTorquePercent)
+{
+    int32_t Current_Error;
+    float out;
+    Current_Error = SetTorquePercent - FactTorquePercent; // è¯¯å·®æ˜¯ç™¾åˆ†æ¯”å·®å€¼
+	if(Current_Error>0)
+	{
+		TorqueIError = 0;
+	}
+
+    TorqueIError = TorqueIError + Current_Error;
+    if(TorqueIError > TorqueIErrorIElimit) TorqueIError = TorqueIErrorIElimit;
+    if(TorqueIError < -(int)TorqueIErrorIElimit) TorqueIError = -(int)TorqueIErrorIElimit;
+
+    out = TorqueP * Current_Error + TorqueI * TorqueIError + TorqueD * (Current_Error - TorqueLast_Error);
+    TorqueLast_Error = Current_Error; // æ›´æ–°ä¸Šä¸€æ¬¡çš„è¯¯å·®
+
+    if(out > 6000) out = 0;
+    else if(out < -6000) out = -6000;
+    return out;
 }
 
 
@@ -78,24 +103,24 @@ float WZ_Last_Error,WZ_Previous_Error;
 
 float PID_WZ(int32_t  SetPower,int32_t FactPower)
 {
- 	 
-	int32_t iError;	//µ±Ç°Îó²î
+   
+ int32_t iError;	//ï¿½ï¿½Ç°ï¿½ï¿½ï¿½
 
-	float Increase;	//×îºóµÃ³öµÄÊµ¼ÊÔöÁ¿
-	float  IE;  //
-	iError = SetPower - FactPower;	// ¼ÆËãµ±Ç°Îó²î
-	IE=WZ_PowerI * iError;
+ float Increase;	//ï¿½ï¿½ï¿½Ã³ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+ float  IE;  //
+ iError = SetPower - FactPower;	// ï¿½ï¿½ï¿½ãµ±Ç°ï¿½ï¿½ï¿½
+ IE = WZ_PowerI * iError;
 
-		IE=IE > WZ_PowerIErrorIElimit?WZ_PowerIErrorIElimit:IE;
-		IE=IE < -(int)WZ_PowerIErrorIElimit?-(int)WZ_PowerIErrorIElimit:IE;
+  IE=IE > WZ_PowerIErrorIElimit?WZ_PowerIErrorIElimit:IE;
+  IE=IE < -(int)WZ_PowerIErrorIElimit?-(int)WZ_PowerIErrorIElimit:IE;
 
-	Increase =  1.0*WZ_PowerP * (iError - WZ_Last_Error) + IE;//
-			    
-			   //+1.0*WZ_PowerD * (iError - 2 *  WZ_Last_Error + WZ_Previous_Error);  //Î¢·ÖD
-	
-	WZ_Previous_Error = WZ_Last_Error;	// ¸üÐÂÇ°´ÎÎó²î
-	WZ_Last_Error = iError;		  	// ¸üÐÂÉÏ´ÎÎó²î
-	return Increase;	// ·µ»ØÔöÁ¿
+ Increase =  1.0*WZ_PowerP * (iError - WZ_Last_Error) + IE;//
+       
+      //+1.0*WZ_PowerD * (iError - 2 *  WZ_Last_Error + WZ_Previous_Error);  //Î¢ï¿½ï¿½D
+ 
+ WZ_Previous_Error = WZ_Last_Error;	// ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½
+ WZ_Last_Error = iError;		  	// ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ï¿½ï¿½ï¿½
+ return Increase;	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 }
 
 

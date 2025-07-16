@@ -637,7 +637,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 							ToCheckError=		NowError;
 							 //----------------PID----------------
 
-									PIDout= PIDencodr(ToCheckError);
+									PIDout = PIDencodr(ToCheckError);
 									//if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1))PidSpi=0;
 							//-----------------传输------------------
                   if(!SyncCOMMAND)
