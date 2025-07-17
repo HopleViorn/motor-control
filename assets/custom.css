@@ -1,0 +1,31 @@
+/* assets/custom.css */
+
+/* 为所有按钮添加点击动画 */
+#refresh-ports-btn, 
+#connect-btn, 
+#disconnect-btn, 
+#start-btn, 
+#stop-btn, 
+#clear-btn, 
+#power-on-btn, 
+#power-off-btn, 
+#set-speed-btn, 
+#emergency-stop-btn, 
+#clear-error-btn {
+    transition: transform 0.1s ease-in-out, box-shadow 0.1s ease-in-out;
+}
+
+#refresh-ports-btn:active, 
+#connect-btn:active, 
+#disconnect-btn:active, 
+#start-btn:active, 
+#stop-btn:active, 
+#clear-btn:active, 
+#power-on-btn:active, 
+#power-off-btn:active, 
+#set-speed-btn:active, 
+#emergency-stop-btn:active, 
+#clear-error-btn:active {
+    transform: scale(0.90); /* 点击时轻微缩小 */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2) inset; /* 添加内阴影，产生按下效果 */
+}
