@@ -180,7 +180,7 @@ TIM_HandleTypeDef htim4;
 #define KW1_ON  HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_SET); 
 #define KW1_OFF HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET); 
 //--------泵型号选择参数--------------------
-uint16_t Vp[4]={300,600,100,100};
+uint16_t Vp[4]={500,600,100,100};
 uint16_t Vi[4]={1000,700,100,100};
 uint16_t ADDTime[4]={8000,8000,10000,10000};
 uint16_t DecTime[4]={1500,5000,10000,10000};

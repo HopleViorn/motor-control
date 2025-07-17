@@ -104,7 +104,7 @@ uint8_t HaveError=0;
 uint8_t outtemp;
 
 int32_t pid_torque;
-int32_t torque_limit = 80;
+int32_t torque_limit = 100;
 
 #define _min_(a,b) ((a)<(b)?(a):(b))
 #define _max_(a,b) ((a)>(b)?(a):(b))
@@ -611,9 +611,25 @@ void armReset(void)
 	
 }
 
+void TorqueLimit(void)
+{
+	CommandSpeedTemp=ZL_PIDPower(PowerLmt,PowerNow2);//FactPower);
+									
+	pid_torque = ZL_PIDTorque(torque_limit, _max_(Pc485RtuReg[22], Pc485RtuReg[23]));
+	NowCommandSPEED = Pc485RtuReg[2];
+
+	// NowCommandSPEED = _min_(NowCommandSPEED, Pc485RtuReg[2] + CommandSpeedTemp);
+
+	// NowCommandSPEED = _min_(NowCommandSPEED, FactSpeed + pid_torque);
+	NowCommandSPEED = Pc485RtuReg[2] - pid_torque;
+
+
+	if(NowCommandSPEED<600)NowCommandSPEED=600;
+}
 
 void SaftyCheck(void)
 {
+	return ;
 		
 	///////////////////上升下降标志产生/////////////////////////		
   //----------------如果处于顶峰-------------------			
@@ -660,273 +676,15 @@ void SaftyCheck(void)
 							if(BadSyncto600Count<2)BadSyncto600Count++;  //<4比《60调节更平滑更稳定。  <4效果已经比较 好了。跳动小
 							else
 							{
-									BadSyncto600Count=0;
-									
-									CommandSpeedTemp=ZL_PIDPower(PowerLmt,PowerNow2);//FactPower);
-										//CommandSpeedTemp=PID_WZ(PowerLmt,PowerNow2);//FactPower);
-									
-									
-					//////////////////////力矩监视 超过100%停在原处转速/////////////////////////////////////////////
-									// torque_limit = 30;
-									// if(((__fabs(Pc485RtuReg[23])>torque_limit)||(__fabs(Pc485RtuReg[22])>torque_limit))&&(SyncCount>=R600Time))
-									// {
-												// 使用PID控制力矩限制目标速度
-									// pid_torque = ZL_PIDTorque(torque_limit, (__fabs(Pc485RtuReg[23])>torque_limit) ? Pc485RtuReg[23] : Pc485RtuReg[22]);
-									pid_torque = ZL_PIDTorque(torque_limit, _max_(Pc485RtuReg[22], Pc485RtuReg[23]));
-
-									// if(((__fabs(Pc485RtuReg[23])>torque_limit)||(__fabs(Pc485RtuReg[22])>torque_limit))&&(SyncCount>=R600Time))
-									// {
-									// 	pid_torque = -10;
-									// }else{
-									// 	pid_torque = NowCommandSPEED - FactSpeed;
-									// }
-
-									NowCommandSPEED= Pc485RtuReg[2];
-									// if(Pc485RtuReg[2] + CommandSpeedTemp < NowCommandSPEED)
-									// {
-									// 	NowCommandSPEED=Pc485RtuReg[2] + CommandSpeedTemp;
-									// }
-									// if(FactSpeed + pid_torque < NowCommandSPEED)
-									// {
-									// 	NowCommandSPEED = FactSpeed + pid_torque;
-									// }
-
-									NowCommandSPEED = _min_(NowCommandSPEED, Pc485RtuReg[2] + CommandSpeedTemp);
-
-									NowCommandSPEED = _min_(NowCommandSPEED, FactSpeed + pid_torque);
-
-
-									if(NowCommandSPEED<600)NowCommandSPEED=600;
+								TorqueLimit();
 							}
 						}
 	
 						
 						
 }	
-
-void SaftyCheckOLD(void) 
-{
-	#if 0
-	        if(SyncCount>=R600Time)
-	        {
-						//------------------Safty  产生   危险检测----------------------------
-							if((ToCheckError<SyncWarningVal)&&(ToCheckError>-SyncWarningVal)&&(Pc485RtuReg[22]<90)&&(Pc485RtuReg[23]<95))  //偏差和力矩要不要不降只停。。。
-							{ 
-											NoSaftyCount=0; //恢复
-											if(Saftycount<30){	Safty=0;Saftycount++;}  //2.5ms检测一次- 125ms内不能再次升速
-											else 
-											{
-													
-													Safty=1;
-										      DengerCount=0;
-													if(PingWenSpeedCount<3)PingWenSpeedCount++;
-													else
-													{
-														PingWenFlag=1;    //当Safty=1后，PinWenFlag=0时，速度不变，平稳期。Falg=1后，开始加速
-													}
-											}												
-              }
-							else 
-             {
-										PingWenSpeedCount=0;
-										PingWenFlag=0;
-                    Saftycount=0;
-										Safty=0;     
-               }
-	        }   //正式工作以前不检测
-	        else
-	        {
-		          Safty =1;
-	        }
-	      #endif
-				
-				//----------------------根据危险算出调整速度----------------------------------------------		
-			
-				#if 0
-			
-				if((Safty)&&(RunFlag))  //安全时
-				{
-					if((SyncCount>=R600Time) &&(NowCommandSPEED !=Pc485RtuReg[2])&&(Pc485RtuReg[3]==1)) //要在开机状态,关机不跟 力短
-					{
-						if(SlowTimeFlag==1)//降过速
-						{
-										//WenFlag时间到后再加速，否则平稳过渡
-									if(PingWenFlag)    //平稳期结束，可以加速了
-									{
-											NowCommandSPEED=Pc485RtuReg[2];
-											//if(NowCommandSPEED<(Pc485RtuReg[2]-10))NowCommandSPEED +=10;//Pc485RtuReg[2];     //后面看要不要+1，逐渐到Reg[2]
-											//else NowCommandSPEED=Pc485RtuReg[2];
-									}
-									else   //平稳期 速度稳定
-									{
-											NowCommandSPEED=FactSpeed;//NowCommandSPEED;
-									}
-							}//降速后
-							else //刚开机 
-							{
-										NowCommandSPEED=Pc485RtuReg[2];
-							}
-					 }
-				}
-				else   if((!Safty)&&(RunFlag)&&(FactSpeed>1000))//不安全处理   //此处已经将指令速度减少2
-				{
-						
-								if(Pc485RtuReg[3]==1)NowCommandSPEED=FactSpeed -5;//2.5ms减10 1秒减2000转
-								SlowTimeFlag=1; //降速标志
-				}
-				#endif
-				
-				
-					
-				
-				
-//	 // --------------------------功率限速-----------------------------------------------
-//			
-//			if((HighSpeedOk)&&(FactSpeed<6010))
-//				{
-//							HighPowerOverFlag=0;
-//							Ok6k=1;
-//					   HighSpeedOk=0;    //下到6000转不恢复则监控后面所有功率
-//				}//到达降速目的,准备新到达12000监控 与开机到6000转不一样
-//				if(FactSpeed>11950)
-//				{
-//						if(MaxPowerCount<1000)MaxPowerCount++;
-//						else
-//						{
-//							//	ADDTimeData=16000;
-//								MaxPowerCount=0;
-//								Ok6k=0;
-//								HighSpeedOk=1;    //开始监控功率
-//								OnFist=1;  //第一次开机完成，用于初次升速不监控功率
-//						}
-//						
-//				}
-//				//----------------------------------------------------------
-//				if(HighSpeedOk)//下降过程 只有下降到6000以下了才为0
-//				{
-
-//					if((__fabs(Pc485RtuReg[23])>59)||(__fabs(Pc485RtuReg[22])>59))    //用左电机右电机易过载，只好移动右电机 。故加5
-//					//if(__fabs(Pc485RtuReg[22])>52) //  12K转时，4.6孔左52以上下降 。而4.2，3.58不降
-//					{
-//								NowCommandSPEED=6000;	
-//							//	NowCommandSPEED=5800;	 //6000最大孔容易力矩超100
-//								HighPowerOverFlag=1;
-//								
-//					 }
-//					 else
-//					 {
-//								if(!HighPowerOverFlag)NowCommandSPEED=Pc485RtuReg[2];//没过载才让用户调整。否则降到6K后才能调整。 不过载时 防止下降过程来回震荡
-//					 }
-//				}	
-//				else  //上升过程
-//				{
-//						
-//				}	
-				//------------------力矩偏差过大检测---------------------------
-				#if 0
-							//if(((__fabs(Pc485RtuReg[23])>102)||(__fabs(Pc485RtuReg[22])>95)||(ToCheckError>SyncWarningVal)||(ToCheckError<-SyncWarningVal))&&(SyncCount>=R600Time)) //只监控第一次上升 停机，报错
-							//if(((__fabs(Pc485RtuReg[23])>102)||(__fabs(Pc485RtuReg[22])>95)||(ToCheckError>SyncWarningVal)||(ToCheckError<-SyncWarningVal)
-							//					||(__fabs(PowerNow)>684000))&&(SyncCount>=R600Time))	
-						if(((__fabs(Pc485RtuReg[23])>99)||(__fabs(Pc485RtuReg[22])>99)||(ToCheckError>SyncWarningVal)||(ToCheckError<-SyncWarningVal))&&(SyncCount>=R600Time))//力矩过大
-						{
-										if(BadSyncto600Count<400)BadSyncto600Count++;  //连续1秒大于后再调整一次，调速完又开始等下一秒
-										else
-										{
-														BadSyncto600Count=0;
-														NowCommandSPEED=FactSpeed-10;	 
-														//Pc485RtuReg[12]=501;//
-																										
-												
-													//Pc485RtuReg[3]=0;不直接停机
-														TM1650_Set(0x6E,CODE7_180[10]); //A
-														TM1650_Set(0x6C,CODE7_180[5]); //  
-														TM1650_Set(0x6A,CODE7_180[0]);  //   
-														TM1650_Set(0x68,CODE7_180[1]);  // 
-													//	HaveError=1;   
-
-													
-													
-										}
-						}
-						else
-						{
-							//不用恢复。因为第二次进来，会在上面把NowCommandSPEED恢复成REG[2]
-						}
-							
-				
-				//------------------功率控制--------------------------
-//						if(((__fabs(PowerNow)>708000)||(__fabs(PowerNow2)>708000))&&(SyncCount>=R600Time))
-//						{
-//									NowCommandSPEED=5500;	
-//									HighPowerOverFlag=1;
-//						}
-//						if(((__fabs(Pc485RtuReg[23])>59)||(__fabs(Pc485RtuReg[22])>59))&&(HighSpeedOk)) //最高功率控制
-//						{
-//										NowCommandSPEED=5500;	
-//										HighPowerOverFlag=1;
-//						}
-						if(((__fabs(PowerNow)>684000)||(__fabs(PowerNow2)>684000))&&(SyncCount>=R600Time)&&(!HighPowerOverFlag))
-						{
-										
-								//if(OverPowerCount<400)OverPowerCount++;  //连续1秒大于后再调整一次，调速完又开始等下一秒
-								//else
-								//{
-														OverPowerCount3=0;
-														OverPowerCount=0;
-														if(NowCommandSPEED>650)NowCommandSPEED=FactSpeed-1;	
-														
-												
-								//}
-						}
-						else if(((__fabs(PowerNow)>650000)||(__fabs(PowerNow2)>650000))&&(SyncCount>=R600Time)&&(!HighPowerOverFlag))
-						{
-								//if(OverPowerCount2<400)OverPowerCount2++;  //连续1秒大于后再调整一次，调速完又开始等下一秒
-								//else
-								//{
-													OverPowerCount3=0;
-														OverPowerCount2=0;
-														NowCommandSPEED=FactSpeed+1;	
-														if(NowCommandSPEED>Pc485RtuReg[2])NowCommandSPEED=Pc485RtuReg[2];
-												
-								//}
-						}
-						else if((!HighPowerOverFlag)&&(SyncCount>=R600Time))
-						{
-								if(OverPowerCount3<400)OverPowerCount3++;  //连续1秒大于后再调整一次，调速完又开始等下一秒
-								else
-								{
-										NowCommandSPEED=Pc485RtuReg[2];
-								}
-						}
-						else{
-								
-						}
-	/////////////////////////120000快速下降最高权限//////////////////////////					
-				if(HighSpeedOk)//下降过程 只有下降到6000以下了才为0
-				{
-
-					if((__fabs(Pc485RtuReg[23])>59)||(__fabs(Pc485RtuReg[22])>59))    //功率相当于70800
-					//if(__fabs(Pc485RtuReg[22])>52) //  12K转时，4.6孔左52以上下降 。而4.2，3.58不降
-					{
-								NowCommandSPEED=5500;	
-							//	NowCommandSPEED=5800;	 //6000最大孔容易力矩超100
-								HighPowerOverFlag=1;
-								
-					 }
-				 }
-				
-				 if(FactSpeed<5500)HighPowerOverFlag=0;//降到位后再恢复过载标志
-											
-				#endif	
-				
-}			
-				
-				
-				
 				
 	
-
-
 void FindSaveInitAngle(void)
 {
 					

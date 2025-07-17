@@ -8,9 +8,10 @@ import time
 from collections import deque
 from threading import Thread, Event
 import logging
-from modbus_client import (connect_modbus_client, read_registers, send_power_on_command, 
-                           get_available_ports, connect_modbus_client_by_port, 
-                           send_power_off_command, send_speed_command)
+from modbus_client import (connect_modbus_client, read_registers, send_power_on_command,
+                           get_available_ports, connect_modbus_client_by_port,
+                           send_power_off_command, send_speed_command,
+                           send_emergency_stop_command, send_clear_error_command)
 
 # 配置示波器参数
 MAX_POINTS = 300  # Web版可以显示更多数据点
@@ -19,7 +20,7 @@ TIME_WINDOW = 30  # 时间窗口，秒
 
 # Modbus 读取配置
 START_ADDRESS = 50
-COUNT = 4  # 读取3个寄存器
+COUNT = 4
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -54,7 +55,7 @@ class ModbusWebOscilloscope:
     def setup_layout(self):
         """设置Web界面布局"""
         self.app.layout = html.Div([
-            html.H1("Modbus 实时示波器 (Web版)", 
+            html.H1("Modbus Oscilloscope", 
                    style={'textAlign': 'center', 'color': '#2c3e50', 'marginBottom': '30px'}),
             
             # 连接设置面板
@@ -109,6 +110,10 @@ class ModbusWebOscilloscope:
                         html.Button('设置转速', id='set-speed-btn', n_clicks=0,
                                    style={'backgroundColor': '#9b59b6', 'color': 'white'}),
                     ], style={'display': 'inline-block'}),
+                    html.Button('紧急停机', id='emergency-stop-btn', n_clicks=0,
+                               style={'backgroundColor': '#e74c3c', 'color': 'white', 'marginLeft': '15px'}),
+                    html.Button('清除错误', id='clear-error-btn', n_clicks=0,
+                               style={'backgroundColor': '#f39c12', 'color': 'white', 'marginLeft': '10px'}),
                 ], style={'width': '48%', 'float': 'right', 'display': 'inline-block'}),
             ], style={'marginBottom': '20px', 'padding': '20px', 'backgroundColor': '#ecf0f1', 'borderRadius': '10px'}),
             
@@ -130,7 +135,7 @@ class ModbusWebOscilloscope:
             ], style={'marginBottom': '30px', 'padding': '20px', 'backgroundColor': '#f8f9fa', 'borderRadius': '10px'}),
             
             # 图表显示
-            dcc.Graph(id='live-graph', style={'height': '60vh'}),
+            dcc.Graph(id='live-graph', style={'height': '80vh'}),
             
             # 自动更新组件
             dcc.Interval(
@@ -232,13 +237,15 @@ class ModbusWebOscilloscope:
             [Input('power-on-btn', 'n_clicks'),
              Input('power-off-btn', 'n_clicks'),
              Input('set-speed-btn', 'n_clicks'),
+             Input('emergency-stop-btn', 'n_clicks'),
+             Input('clear-error-btn', 'n_clicks'),
              Input('connect-btn', 'n_clicks'),
              Input('disconnect-btn', 'n_clicks')],
             [dash.dependencies.State('speed-input', 'value'),
              dash.dependencies.State('port-dropdown', 'value')],
             prevent_initial_call=True
         )
-        def handle_device_control(power_on_clicks, power_off_clicks, speed_clicks, connect_clicks, disconnect_clicks, speed_value, selected_port):
+        def handle_device_control(power_on_clicks, power_off_clicks, speed_clicks, emergency_stop_clicks, clear_error_clicks, connect_clicks, disconnect_clicks, speed_value, selected_port):
             """处理所有设备操作命令"""
             ctx = dash.callback_context
             if not ctx.triggered:
@@ -272,6 +279,14 @@ class ModbusWebOscilloscope:
                     return "错误: 转速范围 0-30000 RPM"
                 success = send_speed_command(self.client, int(speed_value))
                 return f"设置转速 {speed_value} RPM 成功" if success else f"设置转速 {speed_value} RPM 失败"
+            
+            elif button_id == 'emergency-stop-btn' and emergency_stop_clicks > 0:
+                success = send_emergency_stop_command(self.client)
+                return "紧急停机指令发送成功" if success else "紧急停机指令发送失败"
+            
+            elif button_id == 'clear-error-btn' and clear_error_clicks > 0:
+                success = send_clear_error_command(self.client)
+                return "清除错误代码指令发送成功" if success else "清除错误代码指令发送失败"
             
             return "等待操作..."
         
@@ -330,8 +345,8 @@ class ModbusWebOscilloscope:
         
         # 更新布局
         fig.update_layout(
-            height=600,
-            title_text="Modbus 寄存器实时监控",
+            height=800,
+            title_text="Modbus Register Monitor",
             title_x=0.5,
             showlegend=True,
             legend=dict(x=1.02, y=1),
@@ -406,8 +421,8 @@ class ModbusWebOscilloscope:
                             signed_value = reg_value - 65536
                         else:
                             signed_value = reg_value
-                        if i==3:
-                            signed_value = registers[1]*registers[2]
+                        # if i==3:
+                        #     signed_value = registers[1]*registers[2]
                         self.data_queues[i].append(float(signed_value))
             
             # 控制采集频率

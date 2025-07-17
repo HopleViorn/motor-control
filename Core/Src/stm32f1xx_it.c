@@ -348,6 +348,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  //2.5ms
 		
 				//--------------检测---------------
 				if(SyncCount>=R600Time)	SaftyCheck();  //不加限定一开始就升速了
+				// if(SyncCount>=R600Time)	TorqueLimit();
 					//---------------执行--------------
 				//--------------------------------执行---2.5ms一次？-----------------------------------------
 				
@@ -640,7 +641,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 							Pc485RtuReg[50] = ToCheckError;
 							Pc485RtuReg[51] = FactSpeed;
 							Pc485RtuReg[52] = Pc485RtuReg[22]; //Tn
-							Pc485RtuReg[53] = Pc485RtuReg[22]* FactSpeed; //Tn*Speed
+							Pc485RtuReg[53] = Pc485RtuReg[23]; //Tn*Speed
 
 
 							 //----------------PID----------------
@@ -653,12 +654,15 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 										PidSpi=TestPidData;
 									}
 									else PidSpi=PIDout;
-									if(PidSpi>200)PidSpi =200;
-									else if( PidSpi <-200)PidSpi=-200;
+									// if(PidSpi>500)PidSpi =500;
+									// else if( PidSpi <-500)PidSpi=-500;
 //									SPITxBuffer[1]=0;//PidSpi;  //注意：到对方是XR1 
 //									SPITxBuffer[0]=0;	
 //									HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
 //									HAL_SPI_TransmitReceive_IT(&hspi1,(uint8_t * )&SPITxBuffer,(uint8_t * )&SPIRxBuffer,2); // 传输1个16位
+
+									// TorqueLimit();
+
 									
 									SPITxBuffer[0]=PidSpi;	   //DSP的2接收
 									SPITxBuffer[1]=(uint16_t)NowCommandSPEED;    //也就是DSP的1发送接收都是高位  2为低位  此为DSP1接收 

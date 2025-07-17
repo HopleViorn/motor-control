@@ -186,6 +186,64 @@ def send_speed_command(client, speed_rpm):
         print(f"发送调速指令时发生未知错误: {e}")
         return False
 
+def send_emergency_stop_command(client):
+    """发送紧急停机指令: 01 06 00 28 00 01 C8 02 (写单个寄存器，地址0x0028，值0x0001)"""
+    if not client or not client.connected:
+        print("Modbus客户端未连接。")
+        return False
+    
+    register_address = 0x0028  # 寄存器地址
+    value_to_write = 0x0001    # 写入的值
+    
+    print(f"正在发送紧急停机指令: 写寄存器地址 {register_address}，值 {value_to_write}")
+    try:
+        response = client.write_register(address=register_address, value=value_to_write, slave=SLAVE_ADDRESS)
+        
+        if isinstance(response, ModbusException):
+            print(f"发送紧急停机指令失败: Modbus异常 - {response}")
+            return False
+        elif response is None:
+            print("发送紧急停机指令失败: 未收到响应。")
+            return False
+        else:
+            print("紧急停机指令发送成功。")
+            return True
+    except ModbusException as e:
+        print(f"发送紧急停机指令时发生Modbus协议错误: {e}")
+        return False
+    except Exception as e:
+        print(f"发送紧急停机指令时发生未知错误: {e}")
+        return False
+
+def send_clear_error_command(client):
+    """发送清除错误代码指令: 01 06 00 1B 00 01 38 0D (写单个寄存器，地址0x001B，值0x0001)"""
+    if not client or not client.connected:
+        print("Modbus客户端未连接。")
+        return False
+    
+    register_address = 0x001B  # 寄存器地址
+    value_to_write = 0x0001    # 写入的值
+    
+    print(f"正在发送清除错误代码指令: 写寄存器地址 {register_address}，值 {value_to_write}")
+    try:
+        response = client.write_register(address=register_address, value=value_to_write, slave=SLAVE_ADDRESS)
+        
+        if isinstance(response, ModbusException):
+            print(f"发送清除错误代码指令失败: Modbus异常 - {response}")
+            return False
+        elif response is None:
+            print("发送清除错误代码指令失败: 未收到响应。")
+            return False
+        else:
+            print("清除错误代码指令发送成功。")
+            return True
+    except ModbusException as e:
+        print(f"发送清除错误代码时发生Modbus协议错误: {e}")
+        return False
+    except Exception as e:
+        print(f"发送清除错误代码时发生未知错误: {e}")
+        return False
+
 def read_registers(client, start_address, count):
     """
     读取指定范围的寄存器。
@@ -208,7 +266,7 @@ def read_registers(client, start_address, count):
             return None
         elif response is None:
             print("读取寄存器失败: 未收到响应。")
-            return None
+            return False
         else:
             # print(f"读取成功。寄存器值: {response.registers}")
             return response.registers
