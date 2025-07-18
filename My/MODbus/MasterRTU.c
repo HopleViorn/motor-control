@@ -166,7 +166,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)  //接
 						DSP485Received=1;
 						if(FunctionCode ==3)
 						{		
-							if(ReadAddr==0x0809)Pc485RtuReg[23]=(Dsp485RX2Buff[3])<<8|Dsp485RX2Buff[4];  //读右电机 Tn
+							if(ReadAddr==0x0809){
+								Pc485RtuReg[23]=(Dsp485RX2Buff[3])<<8|Dsp485RX2Buff[4];  //读右电机 Tn
+								// Pc485RtuReg[52] = (Dsp485RX2Buff[3])<<8|Dsp485RX2Buff[4];
+							}
 							else if(ReadAddr==0x0806)    //读速度基本没有了，由SPI代替了
 							{
 //									Pc485RtuReg[17]=(Dsp485RX2Buff[3])<<8|Dsp485RX2Buff[4];

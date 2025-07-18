@@ -15,7 +15,7 @@ from modbus_client import (connect_modbus_client, read_registers, send_power_on_
 
 # 配置示波器参数
 MAX_POINTS = 300  # Web版可以显示更多数据点
-UPDATE_INTERVAL_MS = 100  # 更新间隔，毫秒
+UPDATE_INTERVAL_MS = 200  # 更新间隔，毫秒
 TIME_WINDOW = 30  # 时间窗口，秒
 
 # Modbus 读取配置

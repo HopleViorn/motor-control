@@ -595,6 +595,7 @@ void TIM6_IRQHandler(void)
   /* USER CODE END TIM6_IRQn 1 */
 }
 
+
 /* USER CODE BEGIN 1 */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 {
@@ -640,8 +641,8 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 
 							Pc485RtuReg[50] = ToCheckError;
 							Pc485RtuReg[51] = FactSpeed;
-							Pc485RtuReg[52] = Pc485RtuReg[22]; //Tn
-							Pc485RtuReg[53] = Pc485RtuReg[23]; //Tn*Speed
+							Pc485RtuReg[52] = Pc485RtuReg[23]; //Tn
+							Pc485RtuReg[53] = Pc485RtuReg[22]; //Tn*Speed
 
 
 							 //----------------PID----------------

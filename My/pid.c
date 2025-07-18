@@ -3,7 +3,7 @@
 int32_t EncodrIError;
 int32_t EncodrPidIElimit=500000;
 int32_t EncodrPidMax=1000;
-uint16_t  SyncP=400;//400;//100;  ԭΪ100����Ϊ��Ӧ��� ����Ӹĳ�200Ҳ�С��̶ֹ�200
+uint16_t SyncP=400;//400;//100;  ԭΪ100����Ϊ��Ӧ��� ����Ӹĳ�200Ҳ�С��̶ֹ�200
 int32_t SyncI=1;
 
 int32_t PIDencodr(int16_t  error)

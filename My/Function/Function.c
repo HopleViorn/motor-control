@@ -614,74 +614,70 @@ void armReset(void)
 void TorqueLimit(void)
 {
 	CommandSpeedTemp=ZL_PIDPower(PowerLmt,PowerNow2);//FactPower);
-									
 	pid_torque = ZL_PIDTorque(torque_limit, _max_(Pc485RtuReg[22], Pc485RtuReg[23]));
+
 	NowCommandSPEED = Pc485RtuReg[2];
 
 	// NowCommandSPEED = _min_(NowCommandSPEED, Pc485RtuReg[2] + CommandSpeedTemp);
 
 	// NowCommandSPEED = _min_(NowCommandSPEED, FactSpeed + pid_torque);
-	NowCommandSPEED = Pc485RtuReg[2] - pid_torque;
+	// NowCommandSPEED = Pc485RtuReg[2] - pid_torque;
 
 
-	if(NowCommandSPEED<600)NowCommandSPEED=600;
+	if(NowCommandSPEED<600) NowCommandSPEED=600;
 }
 
 void SaftyCheck(void)
 {
-	return ;
 		
 	///////////////////上升下降标志产生/////////////////////////		
   //----------------如果处于顶峰-------------------			
-				if(FactSpeed>11990)
-				{
-						if(MaxPowerCount<1000)MaxPowerCount++;
-						else
-						{
-							//	ADDTimeData=16000;
-								MaxPowerCount=0;
-								Ok6k=0;
-								HighSpeedOk=1;    //开始监控功率
-								OnFist=1;  //第一次开机完成，用于初次升速不监控功率
-						}
-						
-				}
+	if(MyFactSpeed>11990)
+	{
+			if(MaxPowerCount<1000)MaxPowerCount++;
+			else
+			{
+				//	ADDTimeData=16000;
+					MaxPowerCount=0;
+					Ok6k=0;
+					HighSpeedOk=1;    //开始监控功率
+					OnFist=1;  //第一次开机完成，用于初次升速不监控功率
+			}
+			
+	}
 	//---------------------------------------------
-				if((HighSpeedOk)&&(MyFactSpeed<5200))
-				{
-							HighPowerOverFlag=0;
-							Ok6k=1;
-							HighSpeedOk=0;    //下到6000转不恢复则监控后面所有功率
-				}//到达降速目的,准备新到达12000监控 与开机到6000转不一样
+	if((HighSpeedOk)&&(MyFactSpeed<5200))
+	{
+				HighPowerOverFlag=0;
+				Ok6k=1;
+				HighSpeedOk=0;    //下到6000转不恢复则监控后面所有功率
+	}//到达降速目的,准备新到达12000监控 与开机到6000转不一样
 	/////////////////////////////急降///////////////////////////////////////			
 	//---------------最高转速快速下降-------------------------------------------
-						if(HighSpeedOk)
-						{
-								if((Pc485RtuReg[23]>61)||(Pc485RtuReg[22]>61))//最高功率控制
-								{
-					
-												NowCommandSPEED=5000;	
-												HighPowerOverFlag=1;
-								}
-							  else
-								{
-											if(!HighPowerOverFlag)NowCommandSPEED=Pc485RtuReg[2];  //此处需要加急降过程开始的限制。否则必撞。
-											//急降开始后就不能再跟用户调整了
-								}
-								
-							}
+	if(HighSpeedOk)
+	{
+		if((Pc485RtuReg[23]>61)||(Pc485RtuReg[22]>61))//最高功率控制
+		{
+
+						NowCommandSPEED=5000;	
+						HighPowerOverFlag=1;
+		}
+		else
+		{
+					if(!HighPowerOverFlag)NowCommandSPEED=Pc485RtuReg[2];  //此处需要加急降过程开始的限制。否则必撞。
+					//急降开始后就不能再跟用户调整了
+		}
+		
+	}
 /////////////////////////上升功率限制///////////////////////////////////
-						if(!HighSpeedOk)//已经降到位，或第一次上升，则上升用Pid.
-						{
-							if(BadSyncto600Count<2)BadSyncto600Count++;  //<4比《60调节更平滑更稳定。  <4效果已经比较 好了。跳动小
-							else
-							{
-								TorqueLimit();
-							}
-						}
-	
-						
-						
+	if(!HighSpeedOk)//已经降到位，或第一次上升，则上升用Pid.
+	{
+		if(BadSyncto600Count<2)BadSyncto600Count++;  //<4比《60调节更平滑更稳定。  <4效果已经比较 好了。跳动小
+		else
+		{
+			TorqueLimit();
+		}
+	}
 }	
 				
 	

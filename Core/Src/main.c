@@ -181,7 +181,7 @@ TIM_HandleTypeDef htim4;
 #define KW1_OFF HAL_GPIO_WritePin(GPIOE, GPIO_PIN_2, GPIO_PIN_RESET); 
 //--------泵型号选择参数--------------------
 uint16_t Vp[4]={500,600,100,100};
-uint16_t Vi[4]={1000,700,100,100};
+uint16_t Vi[4]={700,700,100,100};
 uint16_t ADDTime[4]={8000,8000,10000,10000};
 uint16_t DecTime[4]={1500,5000,10000,10000};
 uint16_t OverPowerLiJuat12000[4]={57,200,57,57};   //12000降速力矩
@@ -237,7 +237,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
- HAL_Init();
+	HAL_Init();
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -380,7 +380,8 @@ SelfCheck();  //有错误死循环 ,需重启设备
 								TM1650_Set(0x68,CODE7_180[0]);  //6 
 		}
 		
-		
+		//ReadDsp1RegITReiver(2,0x0809);   //现在只读Tn2  Tn1由SPI传送
+		// HAL_Delay(10);
 
 
 		//------------------------------------------------------------					
@@ -704,11 +705,11 @@ static void MX_NVIC_Init(void)
 	HAL_NVIC_SetPriority(TIM2_IRQn, 3, 0);    //危险预警和 处理
     HAL_NVIC_EnableIRQ(TIM2_IRQn);
 	
-	HAL_NVIC_SetPriority(USART1_IRQn, 2, 1); //PC485
+	HAL_NVIC_SetPriority(USART1_IRQn, 2, 2); //PC485
   HAL_NVIC_EnableIRQ(USART1_IRQn);
 	
 
-  HAL_NVIC_SetPriority(USART2_IRQn, 2,2);   //DSP485
+  HAL_NVIC_SetPriority(USART2_IRQn, 2,1);   //DSP485
   HAL_NVIC_EnableIRQ(USART2_IRQn);
 	
 	HAL_NVIC_SetPriority(EXTI9_5_IRQn, 2, 1);
