@@ -3,8 +3,8 @@
 int32_t EncodrIError;
 int32_t EncodrPidIElimit=500000;
 int32_t EncodrPidMax=1000;
-uint16_t SyncP=400;//400;//100;  ԭΪ100����Ϊ��Ӧ��� ����Ӹĳ�200Ҳ�С��̶ֹ�200
-int32_t SyncI=1;
+uint16_t SyncP=1200;//400;//100;  ԭΪ100����Ϊ��Ӧ��� ����Ӹĳ�200Ҳ�С��̶ֹ�200
+int32_t SyncI=2;
 
 int32_t PIDencodr(int16_t  error)
 {
@@ -26,12 +26,9 @@ int32_t PIDencodr(int16_t  error)
 	//out=out/200;   //��Ʒ200 = 90000ת�ɹ�
 	//out=out/100;   //��Ʒ 100= 9200ת�ɹ�
 	out=out/400;   //��Ʒ = 9500?ת�ɹ�
-    if(out >EncodrPidMax) out =EncodrPidMax;
-    if(out <-EncodrPidMax) out =-EncodrPidMax;
-
-    
+    if(out > EncodrPidMax) out =EncodrPidMax;
+    if(out < -EncodrPidMax) out =-EncodrPidMax;
     return out;      ///3;
-
 }
 
 int32_t  PowerLmt=700000;
@@ -41,8 +38,6 @@ float PowerP=0.0005;//0.0005;
 float PowerI=0.0001;
 float  ZL_PIDPower(int32_t  SetPower,int32_t FactPower)
 {
-    
-    
     int32_t Current_Error;
     float out;
     Current_Error=SetPower-FactPower;  //���������ֵ������  ���ֵ700000   ���12000���
@@ -67,16 +62,20 @@ float TorqueP = 0.5;
 float TorqueI = 0;
 float TorqueD = 0; // 微分项系数
 int32_t TorqueLast_Error = 0; // 上一次的误差
+//倍数
+float TorqueMultiplier = 50.0;
 
 float ZL_PIDTorque(int32_t SetTorquePercent, int32_t FactTorquePercent)
 {
     int32_t Current_Error;
     float out;
     Current_Error = SetTorquePercent - FactTorquePercent; // 误差是百分比差值
-	if(Current_Error>0)
-	{
-		TorqueIError = 0;
-	}
+
+	// if(Current_Error>0)
+	// {
+	// 	TorqueIError = 0;
+	// 	return 0;
+	// }
 
     TorqueIError = TorqueIError + Current_Error;
     if(TorqueIError > TorqueIErrorIElimit) TorqueIError = TorqueIErrorIElimit;
@@ -85,7 +84,9 @@ float ZL_PIDTorque(int32_t SetTorquePercent, int32_t FactTorquePercent)
     out = TorqueP * Current_Error + TorqueI * TorqueIError + TorqueD * (Current_Error - TorqueLast_Error);
     TorqueLast_Error = Current_Error; // 更新上一次的误差
 
-    if(out > 6000) out = 0;
+	out = out*TorqueMultiplier;
+
+    if(out > 6000) out = 6000;
     else if(out < -6000) out = -6000;
     return out;
 }

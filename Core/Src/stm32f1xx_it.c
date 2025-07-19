@@ -83,6 +83,7 @@ uint8_t  BaiFenShuIndex,BeginStep;
 extern uint8_t  BaiFenShuIndex;
 uint16_t AddSpeedCount,DecSpeedCount;
 extern int16_t NowCommandSPEED; //RPM
+extern int16_t final_speed;
 extern int16_t Pc485RtuReg[100];
 
 uint16_t LowstSpeed=600;
@@ -120,15 +121,15 @@ int16_t syncConst=0;
 int16_t  NowError;
 
 int32_t PidSpi;
-	uint16_t Count,CCH,CCL,CCH2,CCL2;
-	
-	uint16_t CC1[4],ccsum;
-	int16_t BaiFenShu;
-	
-	int16_t FactError;
-	
-	
-	int8_t  Fhao;
+uint16_t Count,CCH,CCL,CCH2,CCL2;
+
+uint16_t CC1[4],ccsum;
+int16_t BaiFenShu;
+
+int16_t FactError;
+
+
+int8_t  Fhao;
 uint32_t hhh;
 uint8_t sh;
 uint8_t RunFlag;
@@ -322,6 +323,10 @@ void SysTick_Handler(void)
 /* For the available peripheral interrupt handler names,                      */
 /* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
+
+int16_t torque_limit_count = 0;
+int16_t torque_limit_count_limit = 10;
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  //2.5ms
 {
 	
@@ -347,8 +352,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  //2.5ms
 				//	FftPowerNow=__fabs(FftPowerNow);
 		
 				//--------------检测---------------
-				if(SyncCount>=R600Time)	SaftyCheck();  //不加限定一开始就升速了
-				// if(SyncCount>=R600Time)	TorqueLimit();
+				// if(SyncCount>=R600Time)	SaftyCheck();  //不加限定一开始就升速了
+				// if(++torque_limit_count > torque_limit_count_limit){
+				// 	torque_limit_count = 0;
+				TorqueLimit();
+				// }
 					//---------------执行--------------
 				//--------------------------------执行---2.5ms一次？-----------------------------------------
 				
@@ -596,6 +604,10 @@ void TIM6_IRQHandler(void)
 }
 
 
+extern int16_t torque_filtered;
+extern int16_t torque_limit_speed_filtered;
+extern int16_t final_speed;
+
 /* USER CODE BEGIN 1 */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 {
@@ -606,7 +618,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 						if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_6)&HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_7))
 						{
 							FactError=HAL_TIM_ReadCapturedValue(htim,TIM_CHANNEL_1);//11ʱ�ɼ�10����
-							Pc485RtuReg[50] = FactError;
+							// Pc485RtuReg[50] = FactError;
 							if(Fhao==1)
 							{
 									//syncConst=FactError/2;   
@@ -641,8 +653,10 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 
 							Pc485RtuReg[50] = ToCheckError;
 							Pc485RtuReg[51] = FactSpeed;
-							Pc485RtuReg[52] = Pc485RtuReg[23]; //Tn
-							Pc485RtuReg[53] = Pc485RtuReg[22]; //Tn*Speed
+							Pc485RtuReg[52] = Pc485RtuReg[22]; //Tn*Speed
+							Pc485RtuReg[53] = torque_filtered;
+							Pc485RtuReg[54] = torque_limit_speed_filtered;
+
 
 
 							 //----------------PID----------------
@@ -662,11 +676,11 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 //									HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
 //									HAL_SPI_TransmitReceive_IT(&hspi1,(uint8_t * )&SPITxBuffer,(uint8_t * )&SPIRxBuffer,2); // 传输1个16位
 
-									// TorqueLimit();
+									// NowCommandSPEED=Pc485RtuReg[2];
 
-									
 									SPITxBuffer[0]=PidSpi;	   //DSP的2接收
-									SPITxBuffer[1]=(uint16_t)NowCommandSPEED;    //也就是DSP的1发送接收都是高位  2为低位  此为DSP1接收 
+									// SPITxBuffer[1]=(uint16_t)NowCommandSPEED;    //也就是DSP的1发送接收
+									SPITxBuffer[1]=(uint16_t)final_speed;    //也就是DSP的1发送接收都是高位  2为低位  此为DSP1接收 
 									HAL_GPIO_WritePin(GPIOA,GPIO_PIN_4,GPIO_PIN_RESET);
 									HAL_SPI_TransmitReceive_IT(&hspi1,(uint8_t * )&SPITxBuffer,(uint8_t * )&SPIRxBuffer,2); // 传输2个16位
 									

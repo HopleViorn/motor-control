@@ -133,6 +133,7 @@ uint16_t SyncCount;
 extern uint8_t DoFingInitAngValFlag;
 uint8_t FastSpeedFlag;
 int16_t NowCommandSPEED; //RPM
+uint16_t final_speed = 0;
 uint8_t Safty;
 extern uint8_t  iic_WRtemp[200];
 

@@ -94,6 +94,7 @@ extern int32_t FactSpeed;//Rpm
 extern uint8_t SyncCOMMAND;
 extern uint8_t RePress;
 extern int16_t NowCommandSPEED; //RPM
+extern int16_t final_speed;
 extern uint8_t RunFlag;
 extern UART_HandleTypeDef huart2;
 extern int16_t Pc485RtuReg[100];   
@@ -104,7 +105,7 @@ uint8_t HaveError=0;
 uint8_t outtemp;
 
 int32_t pid_torque;
-int32_t torque_limit = 100;
+int32_t torque_limit = 150;
 
 #define _min_(a,b) ((a)<(b)?(a):(b))
 #define _max_(a,b) ((a)>(b)?(a):(b))
@@ -186,7 +187,7 @@ uint8_t CheckBeforeRun(void)
 	InitAngIfRight(1);
 	InitAngIfRight(1);
 	InitAngIfRight(2);
-InitAngIfRight(2);
+	InitAngIfRight(2);
 //---------------------3-检查两电机速度是否一致----------由SPI传送后取消此检查------------
 //	SendDSPCommand(0,0x0130,LowstSpeed);   //做中点校正固定500
 //	SP1=ReadDsp1Reg(1,0x0130);
@@ -611,21 +612,93 @@ void armReset(void)
 	
 }
 
+
+// LPF parameters
+#define Q_FORMAT_SHIFT 5 // Q5 format, equivalent to multiplying by 32
+#define LPF_ALPHA_NUM 3  // Numerator for LPF_ALPHA (3/32 = 0.09375)
+#define LPF_ALPHA_DENOM (1 << Q_FORMAT_SHIFT) // Denominator for LPF_ALPHA (32)
+#define MAX_STEP_Q 50 // Max step per 2.5ms cycle in Q format (0.3125 * 32 = 10)
+
+int64_t s_filteredSpeed_q = 0; // Static variable, stores filtered speed in Q format
+
+// Helper macros for min/max if not already defined
+#ifndef _min_
+#define _min_(a, b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef _max_
+#define _max_(a, b) ((a) > (b) ? (a) : (b))
+#endif
+
+int16_t TargetSpeedLPF(int16_t newSpeed){ // 2.5ms execution cycle
+    // First-order IIR Low-Pass Filter with fixed-point arithmetic
+
+    // Convert newSpeed to Q format
+    int64_t newSpeed_q = newSpeed << Q_FORMAT_SHIFT;
+
+    // Apply the filter in fixed-point arithmetic
+    // new_speed_q = LPF_ALPHA * newSpeed_q + (1.0f - LPF_ALPHA) * s_filteredSpeed_q;
+    // new_speed_q = (LPF_ALPHA_NUM / LPF_ALPHA_DENOM) * newSpeed_q + ((LPF_ALPHA_DENOM - LPF_ALPHA_NUM) / LPF_ALPHA_DENOM) * s_filteredSpeed_q;
+    int64_t filtered_speed_temp = (int32_t)LPF_ALPHA_NUM * newSpeed_q + (int32_t)(LPF_ALPHA_DENOM - LPF_ALPHA_NUM) * s_filteredSpeed_q;
+    int64_t new_speed_q = (int64_t)(filtered_speed_temp >> Q_FORMAT_SHIFT);
+
+    // Apply step limits for both rising and falling edges
+    new_speed_q = _min_(s_filteredSpeed_q + MAX_STEP_Q, new_speed_q);
+    new_speed_q = _max_(s_filteredSpeed_q - 2 * MAX_STEP_Q, new_speed_q);
+
+    s_filteredSpeed_q = new_speed_q;
+
+    // Convert back to original speed unit for return
+    return s_filteredSpeed_q >> Q_FORMAT_SHIFT;
+}
+
+int64_t LPF(int32_t value, int32_t new_value, int32_t alpha_num, int32_t q_format_shift){
+	int32_t alpha_denom = 1 << q_format_shift;
+	int64_t new_value_q = new_value << q_format_shift;
+	int64_t filtered_value_temp = (int64_t)alpha_num * new_value_q + (int64_t)(alpha_denom - alpha_num) * value;
+	int64_t filtered_value = (int64_t)(filtered_value_temp >> q_format_shift);
+
+	return filtered_value;
+}
+
+int64_t IIR(int32_t value, int32_t new_value, int32_t alpha_num, int32_t q_format_shift){
+	int32_t alpha_denom = 1 << q_format_shift;
+	int64_t new_value_q = new_value << q_format_shift;
+	int64_t filtered_value_temp = (int64_t)alpha_num * new_value_q + (int64_t)(alpha_denom - alpha_num) * value;
+	int64_t filtered_value = (int64_t)(filtered_value_temp >> q_format_shift);
+
+	return filtered_value;
+}
+
+
+int64_t torque_filtered_q = 0;
+int16_t torque_filtered = 0;
+int16_t TORQUE_LIMIT_ALPHA_NUM = 1;
+
+int64_t torque_limit_speed_filtered_q = 0;
+int16_t torque_limit_speed_filtered = 0;
+int16_t TORQUE_LIMIT_SPEED_ALPHA_NUM = 1;
+
 void TorqueLimit(void)
 {
-	CommandSpeedTemp=ZL_PIDPower(PowerLmt,PowerNow2);//FactPower);
-	pid_torque = ZL_PIDTorque(torque_limit, _max_(Pc485RtuReg[22], Pc485RtuReg[23]));
-
 	NowCommandSPEED = Pc485RtuReg[2];
+	// final_speed = final_speed + pid_torque;
 
-	// NowCommandSPEED = _min_(NowCommandSPEED, Pc485RtuReg[2] + CommandSpeedTemp);
+	torque_filtered_q = LPF(torque_filtered_q, _max_(Pc485RtuReg[22], Pc485RtuReg[23]), TORQUE_LIMIT_ALPHA_NUM, 8);
+	torque_filtered = torque_filtered_q >> 8;
 
-	// NowCommandSPEED = _min_(NowCommandSPEED, FactSpeed + pid_torque);
-	// NowCommandSPEED = Pc485RtuReg[2] - pid_torque;
+	pid_torque = ZL_PIDTorque(torque_limit, torque_filtered);
 
+	torque_limit_speed_filtered_q = LPF(torque_limit_speed_filtered_q, FactSpeed +  pid_torque, TORQUE_LIMIT_SPEED_ALPHA_NUM, 8);
+	torque_limit_speed_filtered = torque_limit_speed_filtered_q >> 8;
 
-	if(NowCommandSPEED<600) NowCommandSPEED=600;
+	NowCommandSPEED =_min_(Pc485RtuReg[2], torque_limit_speed_filtered);
+
+	final_speed = TargetSpeedLPF(NowCommandSPEED);
+
+	if(final_speed<600) final_speed=600;
 }
+
+int32_t DropTorueLimit = 80;
 
 void SaftyCheck(void)
 {
@@ -656,7 +729,7 @@ void SaftyCheck(void)
 	//---------------最高转速快速下降-------------------------------------------
 	if(HighSpeedOk)
 	{
-		if((Pc485RtuReg[23]>61)||(Pc485RtuReg[22]>61))//最高功率控制
+		if((Pc485RtuReg[23]>DropTorueLimit)||(Pc485RtuReg[22]>DropTorueLimit))//最高功率控制
 		{
 
 						NowCommandSPEED=5000;	
@@ -757,8 +830,6 @@ void BeginSystemSyncProcess(void)
               //运转开始，同步是否开始在外面检测
 	PID_Integrator_Reset();
 }
-
-
 
 void HisSyncAction(void)
 {

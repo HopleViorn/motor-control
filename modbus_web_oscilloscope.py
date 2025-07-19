@@ -20,7 +20,7 @@ TIME_WINDOW = 30  # 时间窗口，秒
 
 # Modbus 读取配置
 START_ADDRESS = 50
-COUNT = 4
+COUNT = 5
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
