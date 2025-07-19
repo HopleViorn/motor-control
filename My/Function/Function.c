@@ -35,8 +35,8 @@ uint8_t RisePowerOver;
 uint16_t HuiFuCount;	
 uint8_t Ok6k,HighPowerOverFlag;
 extern	int32_t BadSpeed;
-										int32_t BadLiJu;
-										int32_t BadPowerNow;
+int32_t BadLiJu;
+int32_t BadPowerNow;
 extern uint16_t MaxPowerCount;
 uint16_t DeltaSpd;
 uint8_t MaxLiJuSlowSpd=60;
@@ -105,7 +105,6 @@ uint8_t HaveError=0;
 uint8_t outtemp;
 
 int32_t pid_torque;
-int32_t torque_limit = 150;
 
 #define _min_(a,b) ((a)<(b)?(a):(b))
 #define _max_(a,b) ((a)>(b)?(a):(b))
@@ -621,7 +620,7 @@ void armReset(void)
 
 // LPF parameters
 #define Q_FORMAT_SHIFT 5 // Q5 format, equivalent to multiplying by 32
-#define LPF_ALPHA_NUM 3  // Numerator for LPF_ALPHA (3/32 = 0.09375)
+#define LPF_ALPHA_NUM 5  // Numerator for LPF_ALPHA (3/32 = 0.09375)
 #define LPF_ALPHA_DENOM (1 << Q_FORMAT_SHIFT) // Denominator for LPF_ALPHA (32)
 #define MAX_STEP_Q 50 // Max step per 2.5ms cycle in Q format (0.3125 * 32 = 10)
 
@@ -644,7 +643,7 @@ int16_t TargetSpeedLPF(int16_t newSpeed){ // 2.5ms execution cycle
     // Apply the filter in fixed-point arithmetic
     // new_speed_q = LPF_ALPHA * newSpeed_q + (1.0f - LPF_ALPHA) * s_filteredSpeed_q;
     // new_speed_q = (LPF_ALPHA_NUM / LPF_ALPHA_DENOM) * newSpeed_q + ((LPF_ALPHA_DENOM - LPF_ALPHA_NUM) / LPF_ALPHA_DENOM) * s_filteredSpeed_q;
-    int64_t filtered_speed_temp = (int32_t)LPF_ALPHA_NUM * newSpeed_q + (int32_t)(LPF_ALPHA_DENOM - LPF_ALPHA_NUM) * s_filteredSpeed_q;
+    int64_t filtered_speed_temp = (int64_t)LPF_ALPHA_NUM * newSpeed_q + (int64_t)(LPF_ALPHA_DENOM - LPF_ALPHA_NUM) * s_filteredSpeed_q;
     int64_t new_speed_q = (int64_t)(filtered_speed_temp >> Q_FORMAT_SHIFT);
 
     // Apply step limits for both rising and falling edges
@@ -671,31 +670,63 @@ int64_t IIR(int32_t value, int32_t new_value, int32_t alpha_num, int32_t q_forma
 	int64_t new_value_q = new_value << q_format_shift;
 	int64_t filtered_value_temp = (int64_t)alpha_num * new_value_q + (int64_t)(alpha_denom - alpha_num) * value;
 	int64_t filtered_value = (int64_t)(filtered_value_temp >> q_format_shift);
-
 	return filtered_value;
 }
 
+int32_t torque_limit = 140;
 
+int64_t temp_torque_error = 0;
+int64_t temp_limit_speed_error = 0;
+int64_t temp_new_speed_limit = 0;
+
+//torque in
 int64_t torque_filtered_q = 0;
 int16_t torque_filtered = 0;
 int16_t TORQUE_LIMIT_ALPHA_NUM = 1;
 
+//fact speed in
+int64_t fact_speed_filtered_q = 0;
+int64_t fact_speed_filtered = 0;
+int64_t FACT_SPEED_ALPHA_NUM = 1;
+
+//final limit
 int64_t torque_limit_speed_filtered_q = 0;
 int16_t torque_limit_speed_filtered = 0;
 int16_t TORQUE_LIMIT_SPEED_ALPHA_NUM = 1;
+
 
 void TorqueLimit(void)
 {
 	NowCommandSPEED = Pc485RtuReg[2];
 	// final_speed = final_speed + pid_torque;
 
-	torque_filtered_q = LPF(torque_filtered_q, _max_(Pc485RtuReg[22], Pc485RtuReg[23]), TORQUE_LIMIT_ALPHA_NUM, 8);
-	torque_filtered = torque_filtered_q >> 8;
+	int16_t new_torque=_max_(Pc485RtuReg[22], Pc485RtuReg[23]);
 
-	pid_torque = ZL_PIDTorque(torque_limit, torque_filtered);
+	//torque in filter
+	temp_torque_error = new_torque*(1<<10) - torque_filtered_q;
+	if(temp_torque_error > 12 * (1<<10)){
+		torque_filtered_q = LPF(torque_filtered_q, new_torque, (int)(0.9 * (1<<10)), 10);
+	}else{
+		torque_filtered_q = LPF(torque_filtered_q, new_torque, TORQUE_LIMIT_ALPHA_NUM, 10);
+	}
+	torque_filtered = torque_filtered_q >> 10;
 
-	torque_limit_speed_filtered_q = LPF(torque_limit_speed_filtered_q, FactSpeed +  pid_torque, TORQUE_LIMIT_SPEED_ALPHA_NUM, 8);
+	//fact speed in filter
+	// fact_speed_filtered_q = LPF(fact_speed_filtered_q, FactSpeed, FACT_SPEED_ALPHA_NUM, 8);
+	// fact_speed_filtered = fact_speed_filtered_q >> 8;
+	fact_speed_filtered = FactSpeed;
+	
+	//torque pid 
+	pid_torque = ZL_PIDTorque(torque_limit, torque_filtered_q);
+	// int64_t new_speed_limit = fact_speed_filtered + pid_torque;
+	int64_t new_speed_limit = _min_(Pc485RtuReg[2], fact_speed_filtered + pid_torque);
+	temp_new_speed_limit = new_speed_limit;
+
+	//final limit filter
+	temp_limit_speed_error = new_speed_limit * (1<<8) - torque_limit_speed_filtered_q;
+	torque_limit_speed_filtered_q = LPF(torque_limit_speed_filtered_q,  new_speed_limit, TORQUE_LIMIT_SPEED_ALPHA_NUM, 8);
 	torque_limit_speed_filtered = torque_limit_speed_filtered_q >> 8;
+
 
 	NowCommandSPEED =_min_(Pc485RtuReg[2], torque_limit_speed_filtered);
 

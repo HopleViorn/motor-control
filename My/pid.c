@@ -4,13 +4,13 @@ int32_t EncodrIError;
 int32_t EncodrPidIElimit=500000;
 int32_t EncodrPidMax=1000;
 uint16_t SyncP=1200;//400;//100;  ԭΪ100����Ϊ��Ӧ��� ����Ӹĳ�200Ҳ�С��̶ֹ�200
-int32_t SyncI=2;
+float SyncI=1;
 
 int32_t PIDencodr(int16_t  error)
 {
     
-    int32_t Current_Error;
-    int32_t out;
+    float Current_Error;
+    float out;
     Current_Error=error;
     //if(Current_Error>500)Current_Error=00;
    // if(Current_Error<-100)Current_Error=-100;
@@ -58,18 +58,18 @@ float  ZL_PIDPower(int32_t  SetPower,int32_t FactPower)
 
 int32_t TorqueIError; 
 int32_t TorqueIErrorIElimit = 6000; 
-float TorqueP = 0.5;
+float TorqueP = 0.25;
 float TorqueI = 0;
 float TorqueD = 0; // 微分项系数
 int32_t TorqueLast_Error = 0; // 上一次的误差
 //倍数
-float TorqueMultiplier = 50.0;
+float TorqueMultiplier = 100.0;
 
-float ZL_PIDTorque(int32_t SetTorquePercent, int32_t FactTorquePercent)
+float ZL_PIDTorque(int32_t SetTorquePercent, int32_t FactTorquePercent_q)
 {
-    int32_t Current_Error;
+    float Current_Error;
     float out;
-    Current_Error = SetTorquePercent - FactTorquePercent; // 误差是百分比差值
+    Current_Error = SetTorquePercent - FactTorquePercent_q/1024.0; // 误差是百分比差值
 
 	// if(Current_Error>0)
 	// {

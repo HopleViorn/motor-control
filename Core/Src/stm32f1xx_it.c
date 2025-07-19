@@ -607,6 +607,9 @@ void TIM6_IRQHandler(void)
 extern int16_t torque_filtered;
 extern int16_t torque_limit_speed_filtered;
 extern int16_t final_speed;
+extern int64_t temp_torque_error;
+extern int64_t temp_limit_speed_error;
+extern int64_t temp_new_speed_limit;
 
 /* USER CODE BEGIN 1 */
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
@@ -656,12 +659,13 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)   //����ص�
 							Pc485RtuReg[52] = Pc485RtuReg[22]; //Tn*Speed
 							Pc485RtuReg[53] = torque_filtered;
 							Pc485RtuReg[54] = torque_limit_speed_filtered;
-
-
+							Pc485RtuReg[55] = temp_limit_speed_error;
+							Pc485RtuReg[56] = temp_new_speed_limit;
+							Pc485RtuReg[57] = FactSpeed;
 
 							 //----------------PID----------------
 
-									PIDout = PIDencodr(ToCheckError);
+								PIDout = PIDencodr(ToCheckError);
 									//if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_1))PidSpi=0;
 							//-----------------传输------------------
                   if(!SyncCOMMAND)
