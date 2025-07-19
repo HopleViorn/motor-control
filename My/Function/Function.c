@@ -84,7 +84,7 @@ extern int16_t iBaiFenShu[10];
 extern uint8_t  BaiFenShuIndex;
 
 extern uint16_t LowstSpeed;
-	int16_t AsSpeed;
+int16_t AsSpeed[10],SAsSpeed;
 extern uint16_t Count,CCH,CCL,CCH2,CCL2;
 uint8_t over;
 uint8_t DoFingInitAngValFlag;
@@ -235,9 +235,11 @@ uint8_t InitAngIfRight(uint8_t MotorNum)
 		
 	while((outtemp!=1)&&(Timeout<50))
 	{
+			FactSpeed=0;
 			outtemp=CheckFindOver(MotorNum);
-			HAL_Delay(400);
+			HAL_Delay(200);
 			Timeout++;
+			AsSpeed[Timeout]=FactSpeed;
 	}
 	if(Timeout>=50)
 	{
@@ -245,8 +247,14 @@ uint8_t InitAngIfRight(uint8_t MotorNum)
 		while(1);     //停止运行
 		armReset();
 	}
-	AsSpeed=ReadDsp1Reg(MotorNum,0x0908);  //读拖动时方向 
-	if(AsSpeed<0)
+	for(char i=0;i<10;i++)
+	{
+			if(AsSpeed[i]>0)AsSpeed[i]=1;
+			else if(AsSpeed[i]<0)AsSpeed[i]=-1;
+	}
+	
+	SAsSpeed=AsSpeed[0]+AsSpeed[1]+AsSpeed[2]+AsSpeed[3]+AsSpeed[4]+AsSpeed[5]+AsSpeed[6]+AsSpeed[7]+AsSpeed[8]+AsSpeed[9];//ReadDsp1Reg(MotorNum,0x0908);  //读拖动时方向 
+	if(((SAsSpeed>0)&&(MotorNum==2))||((SAsSpeed<0)&&(MotorNum==1)))
 	{
 		Pc485RtuReg[12]=300+MotorNum;// UVW线接错
 		TM1650_Set(0x6E,CODE7_180[10]); //A
@@ -393,8 +401,6 @@ int16_t DoFingInitAngVal(uint8_t MotorNum)
 			while(HaveError);   
 		armReset();
 	}
-	AsSpeed=0;
-	AsSpeed=ReadDsp1Reg(MotorNum,0x0908);  //读拖动时方向 
 	if(AsSpeed<0)
 	{
 		Pc485RtuReg[12]=300+MotorNum;// UVW线接错
